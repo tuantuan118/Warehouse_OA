@@ -12,9 +12,8 @@ type JWT struct {
 }
 
 type CustomClaims struct {
-	Id          uint
-	Name        string
-	AuthorityId uint
+	Id   int
+	Name string
 	jwt.StandardClaims
 }
 

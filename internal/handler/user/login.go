@@ -23,9 +23,10 @@ func login(c *gin.Context) {
 		return
 	}
 
-	data, err := service.Login(user.Name, user.Password)
+	data, err := service.Login(user.Email, user.Password)
 	if err != nil {
 		handler.InternalServerError(c, err)
+		return
 	}
 
 	handler.Success(c, data)
@@ -42,6 +43,7 @@ func register(c *gin.Context) {
 	data, err := service.Register(user)
 	if err != nil {
 		handler.InternalServerError(c, err)
+		return
 	}
 
 	handler.Success(c, data)
