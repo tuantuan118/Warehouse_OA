@@ -12,6 +12,13 @@ type Response struct {
 	Data    interface{} `json:"data"`    // 返回的数据
 }
 
+type PaginatedResponse struct {
+	Code    int         `json:"code"`    // 状态码
+	Message string      `json:"message"` // 返回消息
+	Data    interface{} `json:"data"`    // 返回的数据
+	Total   int64       `json:"total"`   // 数据数量
+}
+
 // 定义常见的状态码
 const (
 	SuccessCode    = 200
@@ -25,6 +32,16 @@ func Success(c *gin.Context, data interface{}) {
 		Code:    SuccessCode,
 		Message: "Success",
 		Data:    data,
+	})
+}
+
+// SuccessList 成功响应
+func SuccessList(c *gin.Context, data interface{}, total int64) {
+	c.JSON(http.StatusOK, PaginatedResponse{
+		Code:    SuccessCode,
+		Message: "Success",
+		Data:    data,
+		Total:   total,
 	})
 }
 

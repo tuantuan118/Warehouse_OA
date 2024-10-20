@@ -11,7 +11,13 @@ func InitRouters() *gin.Engine {
 	Router.Use(middlewares.Cors())
 
 	apiGroup := Router.Group("/api/v1")
-	user.InitUserRouter(apiGroup)
+	user.InitLoginRouter(apiGroup)
+
+	group := apiGroup
+	group.Use(middlewares.JWTAuth())
+	user.InitUserRouter(group)
+	user.InitRoleRouter(group)
+	user.InitPermissionRouter(group)
 
 	return Router
 }

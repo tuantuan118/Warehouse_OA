@@ -2,7 +2,8 @@ package models
 
 type Role struct {
 	BaseModel
-	Name        string       `gorm:"type:varchar(100);not null;unique" json:"name"`
+	Name        string       `gorm:"type:varchar(100);not null" json:"name"`
+	NameEn      string       `gorm:"type:varchar(100);not null" json:"nameEn"`
 	Enabled     bool         `gorm:"type:bool;default:true" json:"enabled"` // true 表示启用，false 表示禁用
 	Permissions []Permission `gorm:"many2many:role_permissions;" json:"permissions"`
 }

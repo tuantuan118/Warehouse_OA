@@ -2,7 +2,7 @@ package models
 
 type User struct {
 	BaseModel
-	Name     string `gorm:"type:varchar(100);not null;unique" json:"name"`
+	Name     string `gorm:"type:varchar(100);not null" json:"name"`
 	Email    string `gorm:"type:varchar(256)" json:"email"`
 	Password string `gorm:"type:varchar(256);not null" json:"password"`
 	Type     int    `gorm:"type:int;default:1" json:"type"` // 1.内部（OA账号）

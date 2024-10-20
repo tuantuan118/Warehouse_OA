@@ -7,15 +7,19 @@ import (
 	"warehouse_oa/internal/service"
 )
 
-func InitUserRouter(router *gin.RouterGroup) {
+type Login struct{}
+
+var l Login
+
+func InitLoginRouter(router *gin.RouterGroup) {
 	userRouter := router.Group("user")
 
-	userRouter.GET("ping", ping)
-	userRouter.POST("login", login)
-	userRouter.POST("register", register)
+	userRouter.GET("ping", l.ping)
+	userRouter.POST("login", l.login)
+	userRouter.POST("register", l.register)
 }
 
-func login(c *gin.Context) {
+func (*Login) login(c *gin.Context) {
 	user := &models.User{}
 	if err := c.ShouldBindJSON(user); err != nil {
 		// 如果解析失败，返回 400 错误和错误信息
@@ -32,7 +36,7 @@ func login(c *gin.Context) {
 	handler.Success(c, data)
 }
 
-func register(c *gin.Context) {
+func (*Login) register(c *gin.Context) {
 	user := &models.User{}
 	if err := c.ShouldBindJSON(user); err != nil {
 		// 如果解析失败，返回 400 错误和错误信息
@@ -49,7 +53,7 @@ func register(c *gin.Context) {
 	handler.Success(c, data)
 }
 
-func ping(c *gin.Context) {
+func (*Login) ping(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"message": "pong",
 	})
