@@ -31,13 +31,13 @@ func (*Permission) list(c *gin.Context) {
 		Type:      utils.DefaultQueryInt(c, "type", 0),
 		Enabled:   utils.DefaultQueryBool(c, "enabled", true),
 	}
-	data, total, err := service.GetPermissionList(permission, pn, pSize)
+	data, err := service.GetPermissionList(permission, pn, pSize)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return
 	}
 
-	handler.SuccessList(c, data, total)
+	handler.Success(c, data)
 }
 
 func (*Permission) add(c *gin.Context) {

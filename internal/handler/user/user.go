@@ -27,18 +27,16 @@ func InitUserRouter(router *gin.RouterGroup) {
 func (*User) list(c *gin.Context) {
 	pn, pSize := utils.ParsePaginationParams(c)
 	user := &models.User{
-		Name:     c.DefaultQuery("name", ""),
-		Email:    c.DefaultQuery("email", ""),
-		Type:     utils.DefaultQueryInt(c, "type", 0),
-		Organize: c.DefaultQuery("organize", ""),
+		Username: c.DefaultQuery("username", ""),
+		Nickname: c.DefaultQuery("nickname", ""),
 	}
-	data, total, err := service.GetUserList(user, pn, pSize)
+	data, err := service.GetUserList(user, pn, pSize)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return
 	}
 
-	handler.SuccessList(c, data, total)
+	handler.Success(c, data)
 }
 
 func (*User) update(c *gin.Context) {

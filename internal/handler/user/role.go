@@ -30,13 +30,13 @@ func (*Role) list(c *gin.Context) {
 		Name:      c.DefaultQuery("name", ""),
 		Enabled:   utils.DefaultQueryBool(c, "enabled", true),
 	}
-	data, total, err := service.GetRoleList(role, pn, pSize)
+	data, err := service.GetRoleList(role, pn, pSize)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return
 	}
 
-	handler.SuccessList(c, data, total)
+	handler.Success(c, data)
 }
 
 func (*Role) add(c *gin.Context) {

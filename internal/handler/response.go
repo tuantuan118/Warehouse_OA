@@ -35,16 +35,6 @@ func Success(c *gin.Context, data interface{}) {
 	})
 }
 
-// SuccessList 成功响应
-func SuccessList(c *gin.Context, data interface{}, total int64) {
-	c.JSON(http.StatusOK, PaginatedResponse{
-		Code:    SuccessCode,
-		Message: "Success",
-		Data:    data,
-		Total:   total,
-	})
-}
-
 // SuccessWithMessage 自定义消息的成功响应
 func SuccessWithMessage(c *gin.Context, message string, data interface{}) {
 	c.JSON(http.StatusOK, Response{

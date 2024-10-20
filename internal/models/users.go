@@ -2,11 +2,9 @@ package models
 
 type User struct {
 	BaseModel
-	Name     string `gorm:"type:varchar(100);not null" json:"name"`
-	Email    string `gorm:"type:varchar(256)" json:"email"`
-	Password string `gorm:"type:varchar(256);not null" json:"password"`
-	Type     int    `gorm:"type:int;default:1" json:"type"` // 1.内部（OA账号）
-	Organize string `gorm:"type:varchar(256)" json:"organize"`
+	Username string `gorm:"type:varchar(100);not null" json:"username"`
+	Nickname string `gorm:"type:varchar(256)" json:"nickname"`
+	Password string `gorm:"type:varchar(256);not null" json:"password,omitempty"`
 	Roles    []Role `gorm:"many2many:user_role;" json:"roles"`
 }
 

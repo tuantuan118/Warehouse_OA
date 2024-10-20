@@ -7,7 +7,7 @@ import (
 	"warehouse_oa/internal/models"
 )
 
-func GetPermissionList(permission *models.Permission, pn, pSize int) ([]models.Permission, int64, error) {
+func GetPermissionList(permission *models.Permission, pn, pSize int) (interface{}, error) {
 	db := global.Db.Model(&models.Permission{})
 
 	db = db.Where("enabled = ?", permission.Enabled)
@@ -21,21 +21,7 @@ func GetPermissionList(permission *models.Permission, pn, pSize int) ([]models.P
 		db = db.Where("type = ?", permission.Type)
 	}
 
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	if pn != 0 && pSize != 0 {
-		offset := (pn - 1) * pSize
-		db.Limit(pSize).Offset(offset)
-	}
-
-	var permissionList []models.Permission
-	if err := db.Find(&permissionList).Error; err != nil {
-		return nil, 0, err
-	}
-	return permissionList, total, nil
+	return Pagination(db, []models.Permission{}, pn, pSize)
 }
 
 func SavePermission(permission *models.Permission) (*models.Permission, error) {
@@ -44,8 +30,11 @@ func SavePermission(permission *models.Permission) (*models.Permission, error) {
 	if err != nil {
 		return nil, err
 	}
+	if permission.Parent == nil {
+		permission.ParentID = nil
+	}
 
-	err = global.Db.Model(&models.Permission{}).Create(permission).Error
+	err = global.Db.Model(&models.Permission{}).Create(&permission).Error
 
 	return permission, err
 }
@@ -60,6 +49,12 @@ func UpdatePermission(permission *models.Permission) (*models.Permission, error)
 	}
 
 	permission.Parent, err = getParent(permission.ParentID)
+	if err != nil {
+		return nil, err
+	}
+	if permission.Parent == nil {
+		permission.ParentID = nil
+	}
 
 	return permission, global.Db.Updates(&permission).Error
 }
@@ -132,6 +127,7 @@ func getParent(id *int) (*models.Permission, error) {
 	}
 
 	if *id == 0 {
+		id = nil
 		return nil, nil
 	}
 

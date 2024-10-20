@@ -2,14 +2,13 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"warehouse_oa/internal/global"
 	"warehouse_oa/internal/models"
 )
 
-func GetRoleList(role *models.Role, pn, pSize int) ([]models.Role, int64, error) {
+func GetRoleList(role *models.Role, pn, pSize int) (interface{}, error) {
 	db := global.Db.Model(&models.Role{})
 
 	db = db.Where("enabled = ?", role.Enabled)
@@ -17,25 +16,11 @@ func GetRoleList(role *models.Role, pn, pSize int) ([]models.Role, int64, error)
 		db = db.Where("name = ?", role.Name)
 	}
 
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-
-	if pn != 0 && pSize != 0 {
-		offset := (pn - 1) * pSize
-		db.Limit(pSize).Offset(offset)
-	}
-
-	var roleList []models.Role
-	if err := db.Find(&roleList).Error; err != nil {
-		return nil, 0, err
-	}
-	return roleList, total, nil
+	return Pagination(db, []models.Role{}, pn, pSize)
 }
 
 func SaveRole(role *models.Role) (*models.Role, error) {
-	_, err := GetRoleByNameEn(role.NameEn)
+	err := IfRoleByNameEn(role.NameEn)
 	if err != nil {
 		return nil, err
 	}
@@ -99,20 +84,20 @@ func GetRoleFieldList(field string) ([]string, error) {
 	return fields, nil
 }
 
-// GetRoleByNameEn 判断角色英文名是否已存在
-func GetRoleByNameEn(nameEn string) (*models.Role, error) {
-	role := &models.Role{}
+// IfRoleByNameEn 判断角色英文名是否已存在
+func IfRoleByNameEn(nameEn string) error {
+	var count int64
 
-	result := global.Db.First(&role, "name_en = ?", nameEn)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, errors.New("role does not exist")
-		} else {
-			return nil, errors.New(fmt.Sprintf("error occurred: %s", result.Error.Error()))
-		}
+	err := global.Db.Model(&models.Role{}).Where("name_en = ?",
+		nameEn).Count(&count).Error
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return errors.New("role name already exists")
 	}
 
-	return role, nil
+	return nil
 }
 
 // SetPermissions 分配角色

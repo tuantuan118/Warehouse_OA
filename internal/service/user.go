@@ -2,45 +2,25 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"gorm.io/gorm"
 	"warehouse_oa/internal/global"
 	"warehouse_oa/internal/models"
 	"warehouse_oa/utils"
 )
 
-func GetUserList(user *models.User, pn, pSize int) ([]models.User, int64, error) {
+func GetUserList(user *models.User, pn, pSize int) (interface{}, error) {
 	db := global.Db.Model(&models.User{})
 
-	if user.Name != "" {
-		db = db.Where("name = ?", user.Name)
+	if user.Username != "" {
+		db = db.Where("username = ?", user.Username)
 	}
-	if user.Email != "" {
-		db = db.Where("email = ?", user.Email)
-	}
-	if user.Type != 0 {
-		db = db.Where("type = ?", user.Type)
-	}
-	if user.Organize != "" {
-		db = db.Where("organize = ?", user.Organize)
+	if user.Nickname != "" {
+		db = db.Where("nickname = ?", user.Nickname)
 	}
 
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
+	db = db.Preload("Roles").Omit("password")
 
-	if pn != 0 && pSize != 0 {
-		offset := (pn - 1) * pSize
-		db.Limit(pSize).Offset(offset)
-	}
-
-	var userList []models.User
-	if err := db.Preload("Roles").Find(&userList).Error; err != nil {
-		return nil, 0, err
-	}
-
-	return userList, total, nil
+	return Pagination(db, []models.User{}, pn, pSize)
 }
 
 func GetUserById(id int) (*models.User, error) {
@@ -56,7 +36,7 @@ func GetUserById(id int) (*models.User, error) {
 }
 
 func SaveUser(user *models.User) (*models.User, error) {
-	_, err := GetUserByNameAndEmail(user.Name, user.Email)
+	err := IfUserByUserName(user.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -76,8 +56,7 @@ func UpdateUser(user *models.User) (*models.User, error) {
 		return nil, err
 	}
 
-	user.Email = ""
-	user.Name = ""
+	user.Username = ""
 	user.Password = ""
 	user.Roles = nil
 
@@ -107,11 +86,11 @@ func DelUser(id int, username string) error {
 	return global.Db.Delete(&data).Error
 }
 
-func CheckPassword(email, password string) (*models.User, error) {
+func CheckPassword(username, password string) (*models.User, error) {
 	user := &models.User{}
 
 	db := global.Db.Model(&models.User{})
-	err := db.Where("email = ?", email).First(&user).Error
+	err := db.Where("username = ?", username).First(&user).Error
 	if err != nil {
 		return nil, err
 	}
@@ -142,14 +121,10 @@ func ChangePassword(id int, oldPw, newPw, username string) error {
 func GetUserFieldList(field string) ([]string, error) {
 	db := global.Db.Model(&models.User{})
 	switch field {
-	case "name":
-		db.Select("name")
-	case "email":
-		db.Select("email")
-	case "type":
-		db.Select("type")
-	case "organize":
-		db.Select("organize")
+	case "username":
+		db.Select("username")
+	case "nickname":
+		db.Select("nickname")
 	default:
 		return nil, errors.New("field not exist")
 	}
@@ -161,20 +136,19 @@ func GetUserFieldList(field string) ([]string, error) {
 	return fields, nil
 }
 
-// GetUserByNameAndEmail 判断邮件是否已存在
-func GetUserByNameAndEmail(name, email string) (*models.User, error) {
-	user := &models.User{}
-
-	result := global.Db.First(&user, "name = ? and email = ?", name, email)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return nil, errors.New("user does not exist")
-		} else {
-			return nil, errors.New(fmt.Sprintf("error occurred: %s", result.Error.Error()))
-		}
+// IfUserByUserName 判断用户名是否已存在
+func IfUserByUserName(username string) error {
+	var count int64
+	err := global.Db.Model(&models.User{}).Where("username = ?",
+		username).Count(&count).Error
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return errors.New("user name already exists")
 	}
 
-	return user, nil
+	return nil
 }
 
 // SetRoles 分配角色
@@ -199,6 +173,7 @@ func SetRoles(id int, roleIds []int, operator string) error {
 	return global.Db.Save(&user).Error
 }
 
+// GetRolePermissions 获取权限列表
 func GetRolePermissions(id int) (interface{}, error) {
 	if id == 0 {
 		return nil, errors.New("id is 0")

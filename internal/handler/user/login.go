@@ -27,7 +27,7 @@ func (*Login) login(c *gin.Context) {
 		return
 	}
 
-	data, err := service.Login(user.Email, user.Password)
+	data, err := service.Login(user.Username, user.Password)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return

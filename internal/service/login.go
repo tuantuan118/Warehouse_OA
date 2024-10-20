@@ -8,12 +8,12 @@ import (
 	"warehouse_oa/utils"
 )
 
-func Login(email, password string) (map[string]interface{}, error) {
-	if email == "" || password == "" {
-		return nil, errors.New("email or password is empty")
+func Login(username, password string) (map[string]interface{}, error) {
+	if username == "" || password == "" {
+		return nil, errors.New("nickname or password is empty")
 	}
 
-	user, err := CheckPassword(email, password)
+	user, err := CheckPassword(username, password)
 	if err != nil {
 		return nil, err
 	}
@@ -21,7 +21,7 @@ func Login(email, password string) (map[string]interface{}, error) {
 	jwtUser := utils.NewJWT()
 	token, err := jwtUser.CreateToken(utils.CustomClaims{
 		Id:   user.ID,
-		Name: user.Name,
+		Name: user.Username,
 		StandardClaims: jwt.StandardClaims{
 			NotBefore: time.Now().Unix(),
 			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
@@ -29,13 +29,15 @@ func Login(email, password string) (map[string]interface{}, error) {
 		},
 	})
 
+	user.Password = ""
 	return map[string]interface{}{
 		"token": token,
+		"user":  user,
 	}, nil
 }
 
 func Register(user *models.User) (map[string]interface{}, error) {
-	if user.Name == "" || user.Email == "" || user.Password == "" {
+	if user.Username == "" || user.Nickname == "" || user.Password == "" {
 		return nil, errors.New("user data is empty")
 	}
 
@@ -47,7 +49,7 @@ func Register(user *models.User) (map[string]interface{}, error) {
 	jwtUser := utils.NewJWT()
 	token, err := jwtUser.CreateToken(utils.CustomClaims{
 		Id:   user.ID,
-		Name: user.Name,
+		Name: user.Username,
 		StandardClaims: jwt.StandardClaims{
 			NotBefore: time.Now().Unix(),
 			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
@@ -55,7 +57,9 @@ func Register(user *models.User) (map[string]interface{}, error) {
 		},
 	})
 
+	user.Password = ""
 	return map[string]interface{}{
 		"token": token,
+		"user":  user,
 	}, nil
 }
