@@ -8,5 +8,4 @@ type IngredientInventory struct {
 	Price         float64      `gorm:"type:decimal(12,2)" json:"price"`
 	StockNum      int          `gorm:"type:int(11)" json:"stockNum"`
 	StockUnit     string       `gorm:"type:varchar(256)" json:"stockUnit"`
-	Amount        float64      `json:"amount"`
 }

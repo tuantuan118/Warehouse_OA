@@ -10,5 +10,4 @@ type IngredientInBound struct {
 	StockUnit     string       `gorm:"type:varchar(256)" json:"stockUnit"`
 	StockUser     string       `gorm:"type:varchar(256)" json:"stockUser"`
 	StockTime     string       `gorm:"type:varchar(256)" json:"stockTime"`
-	Amount        float64      `json:"amount"`
 }

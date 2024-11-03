@@ -92,7 +92,7 @@ func GetIngredientsFieldList(field string) ([]string, error) {
 	return fields, nil
 }
 
-// IfIngredientsByName 判断用户名是否已存在
+// IfIngredientsByName 判断名称是否已存在
 func IfIngredientsByName(name string) error {
 	var count int64
 	err := global.Db.Model(&models.Ingredients{}).Where("name = ?",

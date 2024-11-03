@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"warehouse_oa/internal/handler/customer"
 	"warehouse_oa/internal/handler/ingredients"
+	"warehouse_oa/internal/handler/production"
 	"warehouse_oa/internal/handler/user"
 	"warehouse_oa/internal/middlewares"
 )
@@ -23,6 +24,7 @@ func InitRouters() *gin.Engine {
 
 		customer.InitCustomerRouter(group)
 		ingredients.InitIngredientRouter(group)
+		production.InitProductionRouter(group)
 	}
 
 	user.InitPermissionRouter(group)
