@@ -21,7 +21,7 @@ func Login(username, password string) (map[string]interface{}, error) {
 	jwtUser := utils.NewJWT()
 	token, err := jwtUser.CreateToken(utils.CustomClaims{
 		Id:   user.ID,
-		Name: user.Username,
+		Name: user.Nickname,
 		StandardClaims: jwt.StandardClaims{
 			NotBefore: time.Now().Unix(),
 			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
@@ -49,7 +49,7 @@ func Register(user *models.User) (map[string]interface{}, error) {
 	jwtUser := utils.NewJWT()
 	token, err := jwtUser.CreateToken(utils.CustomClaims{
 		Id:   user.ID,
-		Name: user.Username,
+		Name: user.Nickname,
 		StandardClaims: jwt.StandardClaims{
 			NotBefore: time.Now().Unix(),
 			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),

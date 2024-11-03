@@ -2,6 +2,8 @@ package initialize
 
 import (
 	"github.com/gin-gonic/gin"
+	"warehouse_oa/internal/handler/customer"
+	"warehouse_oa/internal/handler/ingredients"
 	"warehouse_oa/internal/handler/user"
 	"warehouse_oa/internal/middlewares"
 )
@@ -15,9 +17,14 @@ func InitRouters() *gin.Engine {
 
 	group := apiGroup
 	group.Use(middlewares.JWTAuth())
-	user.InitUserRouter(group)
-	user.InitRoleRouter(group)
-	user.InitPermissionRouter(group)
+	{
+		user.InitUserRouter(group)
+		user.InitRoleRouter(group)
 
+		customer.InitCustomerRouter(group)
+		ingredients.InitIngredientRouter(group)
+	}
+
+	user.InitPermissionRouter(group)
 	return Router
 }

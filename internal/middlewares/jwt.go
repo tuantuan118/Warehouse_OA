@@ -9,7 +9,7 @@ import (
 
 func JWTAuth() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		token := ctx.Request.Header.Get("x-token")
+		token := ctx.Request.Header.Get("X-Token")
 		if token == "" {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, map[string]string{
 				"message": "token is empty",

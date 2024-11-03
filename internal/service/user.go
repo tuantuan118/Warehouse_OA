@@ -29,7 +29,7 @@ func GetUserById(id int) (*models.User, error) {
 	data := &models.User{}
 	err := db.Where("id = ?", id).First(&data).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errors.New("role does not exist")
+		return nil, errors.New("user does not exist")
 	}
 
 	return data, err
