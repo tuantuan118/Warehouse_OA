@@ -56,9 +56,18 @@ func InitDb() error {
 
 func migration() {
 	err := global.Db.Set("gorm:table_options", "charset=utf8mb4").AutoMigrate(
-		&models.User{},
-		&models.Role{},
+		&models.Customer{},
+		&models.IngredientInBound{},
+		&models.IngredientInventory{},
+		&models.Ingredients{},
+		&models.Order{},
 		&models.Permission{},
+		&models.Produce{},
+		&models.ProduceManage{},
+		&models.ProduceStock{},
+		&models.ProductMaterial{},
+		&models.Role{},
+		&models.User{},
 	)
 	if err != nil {
 		logrus.Error("migration err: ", err.Error())

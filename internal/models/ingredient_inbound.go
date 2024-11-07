@@ -6,6 +6,7 @@ type IngredientInBound struct {
 	Ingredient    *Ingredients `gorm:"foreignKey:IngredientID" json:"ingredient"`
 	Specification string       `gorm:"type:varchar(256)" json:"specification"`
 	Price         float64      `gorm:"type:decimal(12,2)" json:"price"`
+	TotalPrice    float64      `gorm:"type:decimal(12,2)" json:"totalPrice"`
 	StockNum      int          `gorm:"type:int(11)" json:"stockNum"`
 	StockUnit     string       `gorm:"type:varchar(256)" json:"stockUnit"`
 	StockUser     string       `gorm:"type:varchar(256)" json:"stockUser"`

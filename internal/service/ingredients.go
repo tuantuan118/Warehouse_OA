@@ -81,6 +81,8 @@ func GetIngredientsFieldList(field string) ([]string, error) {
 	switch field {
 	case "name":
 		db.Select("name")
+	case "supplier":
+		db.Select("supplier")
 	default:
 		return nil, errors.New("field not exist")
 	}

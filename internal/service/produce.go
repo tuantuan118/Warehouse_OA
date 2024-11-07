@@ -2,7 +2,9 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"gorm.io/gorm"
+	"time"
 	"warehouse_oa/internal/global"
 	"warehouse_oa/internal/models"
 )
@@ -52,6 +54,12 @@ func SaveProduce(produce *models.Produce) (*models.Produce, error) {
 		return nil, err
 	}
 
+	today := time.Now().Format("20060102")
+	total, err := getTodayOrderCount()
+	if err != nil {
+		return nil, err
+	}
+	produce.OrderNumber = fmt.Sprintf("SC%s%d", today, total+10000)
 	produce.ProduceManage = produceManage
 	produce.Name = produceManage.Name
 	produce.Status = 1
@@ -117,4 +125,15 @@ func GetProduceFieldList(field string) ([]string, error) {
 	}
 
 	return fields, nil
+}
+
+func getTodayOrderCount() (int64, error) {
+	today := time.Now().Format("2006-01-02")
+	startOfDay, _ := time.Parse("2006-01-02", today)
+
+	var total int64
+	err := global.Db.Model(&models.Produce{}).Where(
+		"add_time >= ?", startOfDay).Count(&total).Error
+
+	return total, err
 }

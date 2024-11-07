@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"gorm.io/gorm"
+	"math/big"
 	"warehouse_oa/internal/global"
 	"warehouse_oa/internal/models"
 )
@@ -44,9 +45,27 @@ func SaveInBound(inBound *models.IngredientInBound) (*models.IngredientInBound, 
 		return nil, err
 	}
 
+	price := big.NewFloat(inBound.Price)
+	stockNum := big.NewFloat(float64(inBound.StockNum))
+	floatResult := new(big.Float).Mul(price, stockNum)
+	inBound.TotalPrice, _ = floatResult.Float64()
 	inBound.Ingredient = ingredients
 
-	err = global.Db.Model(&models.IngredientInBound{}).Create(inBound).Error
+	db := global.Db
+	tx := db.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	err = SaveInventoryByInBound(tx, inBound)
+	if err != nil {
+		return nil, err
+	}
+	err = tx.Model(&models.IngredientInBound{}).Create(inBound).Error
 
 	return inBound, err
 }
@@ -55,21 +74,43 @@ func UpdateInBound(inBound *models.IngredientInBound) (*models.IngredientInBound
 	if inBound.ID == 0 {
 		return nil, errors.New("id is 0")
 	}
-	data, err := GetInBoundById(inBound.ID)
+	var err error
+	oldData := new(models.IngredientInBound)
+	oldData, err = GetInBoundById(inBound.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	if data.IngredientID != inBound.IngredientID {
-		ingredients, err := GetIngredientsById(*inBound.IngredientID)
+	if oldData.IngredientID != inBound.IngredientID {
+		ingredients := new(models.Ingredients)
+		ingredients, err = GetIngredientsById(*inBound.IngredientID)
 		if err != nil {
 			return nil, err
 		}
 
 		inBound.Ingredient = ingredients
 	}
+	db := global.Db
+	tx := db.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
 
-	return inBound, global.Db.Updates(&inBound).Error
+	err = SaveInventoryByInBound(tx, inBound)
+	if err != nil {
+		return nil, err
+	}
+	err = UpdateInventoryByInBound(tx, oldData)
+	if err != nil {
+		return nil, err
+	}
+	err = global.Db.Updates(&inBound).Error
+
+	return inBound, err
 }
 
 func DelInBound(id int, username string) error {
@@ -97,17 +138,16 @@ func DelInBound(id int, username string) error {
 
 // GetInBoundFieldList 获取字段列表
 func GetInBoundFieldList(field string) ([]string, error) {
-	db := global.Db.Model(&models.IngredientInBound{})
-	switch field {
-	case "name":
-		db.Select("name")
-	default:
-		return nil, errors.New("field not exist")
-	}
-	fields := make([]string, 0)
-	if err := db.Scan(&fields).Error; err != nil {
-		return nil, err
-	}
-
-	return fields, nil
+	//db := global.Db.Model(&models.IngredientInBound{})
+	//switch field {
+	//default:
+	//	return nil, errors.New("field not exist")
+	//}
+	//fields := make([]string, 0)
+	//if err := db.Scan(&fields).Error; err != nil {
+	//	return nil, err
+	//}
+	//
+	//return fields, nil
+	return nil, nil
 }

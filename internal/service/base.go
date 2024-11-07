@@ -12,7 +12,7 @@ func Pagination(db *gorm.DB, model interface{}, pn, pSize int) (map[string]inter
 
 	if pn != 0 && pSize != 0 {
 		offset := (pn - 1) * pSize
-		db = db.Limit(pSize).Offset(offset)
+		db = db.Order("id desc").Limit(pSize).Offset(offset)
 	}
 
 	data := model

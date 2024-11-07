@@ -17,6 +17,7 @@ func InitManageRouter(router *gin.RouterGroup) {
 
 	inBoundRouter.GET("list", m.list)
 	inBoundRouter.GET("fields", m.fields)
+	inBoundRouter.GET("getIngredients", m.getIngredientsByID)
 	inBoundRouter.POST("add", m.add)
 	inBoundRouter.POST("update", m.update)
 	inBoundRouter.POST("delete", m.delete)
@@ -27,6 +28,18 @@ func (*Manage) list(c *gin.Context) {
 	name := c.DefaultQuery("name", "")
 
 	data, err := service.GetProduceManageList(name, pn, pSize)
+	if err != nil {
+		handler.InternalServerError(c, err)
+		return
+	}
+
+	handler.Success(c, data)
+}
+
+func (*Manage) getIngredientsByID(c *gin.Context) {
+	id := utils.DefaultQueryInt(c, "id", 0)
+
+	data, err := service.GetProduceManageIngredients(id)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return

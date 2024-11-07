@@ -17,6 +17,35 @@ func GetProduceManageList(name string, pn, pSize int) (interface{}, error) {
 	return Pagination(db, []models.ProduceManage{}, pn, pSize)
 }
 
+func GetProduceManageIngredients(id int) ([]map[string]interface{}, error) {
+	if id == 0 {
+		return nil, errors.New("id is 0")
+	}
+	db := global.Db
+	productIngredient := make([]models.ProductMaterial, 0)
+
+	err := db.Where("produce_manage_id = ?", id).Preload(
+		"IngredientInventory.Ingredient").Find(&productIngredient).Error
+	if err != nil {
+		return nil, err
+	}
+
+	requestData := make([]map[string]interface{}, 0)
+	for _, v := range productIngredient {
+		ingredient, err := GetIngredientsById(*v.IngredientInventory.IngredientID)
+		if err != nil {
+			return nil, err
+		}
+		requestData = append(requestData, map[string]interface{}{
+			"name":      ingredient.Name,
+			"quantity":  v.Quantity,
+			"stockUnit": v.IngredientInventory.StockUnit,
+		})
+	}
+
+	return requestData, err
+}
+
 func GetProduceManageById(id int) (*models.ProduceManage, error) {
 	db := global.Db.Model(&models.ProduceManage{})
 
@@ -30,22 +59,35 @@ func GetProduceManageById(id int) (*models.ProduceManage, error) {
 }
 
 func SaveProduceManage(produceManage *models.ProduceManage) (*models.ProduceManage, error) {
-	if produceManage.Ingredients == nil || len(produceManage.Ingredients) == 0 {
+	if produceManage.Material == nil || len(produceManage.Material) == 0 {
 		return nil, errors.New("ingredients is empty")
 	}
+	var err error
+	db := global.Db
+	tx := db.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
 
-	ingredientList := make([]models.IngredientInventory, 0)
-	for _, ingredients := range produceManage.Ingredients {
-		inventory, err := GetInventoryById(ingredients.ID)
+	err = global.Db.Model(&models.ProduceManage{}).Create(&produceManage).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for _, material := range produceManage.Material {
+		inventory := new(models.IngredientInventory)
+		inventory, err = GetInventoryById(material.IngredientID)
 		if err != nil {
 			return nil, err
 		}
-		ingredientList = append(ingredientList, *inventory)
+		material.IngredientInventory = inventory
 	}
 
-	produceManage.Ingredients = ingredientList
-
-	return produceManage, global.Db.Model(&models.ProduceManage{}).Create(produceManage).Error
+	return produceManage, err
 }
 
 func UpdateProduceManage(produceManage *models.ProduceManage) (*models.ProduceManage, error) {
@@ -57,20 +99,18 @@ func UpdateProduceManage(produceManage *models.ProduceManage) (*models.ProduceMa
 		return nil, err
 	}
 
-	if produceManage.Ingredients == nil || len(produceManage.Ingredients) == 0 {
+	if produceManage.Material == nil || len(produceManage.Material) == 0 {
 		return nil, errors.New("ingredients is empty")
 	}
 
-	ingredientList := make([]models.IngredientInventory, 0)
-	for _, ingredients := range produceManage.Ingredients {
-		inventory, err := GetInventoryById(ingredients.ID)
+	for _, material := range produceManage.Material {
+		inventory := new(models.IngredientInventory)
+		inventory, err = GetInventoryById(material.IngredientID)
 		if err != nil {
 			return nil, err
 		}
-		ingredientList = append(ingredientList, *inventory)
+		material.IngredientInventory = inventory
 	}
-
-	produceManage.Ingredients = ingredientList
 
 	return produceManage, global.Db.Updates(&produceManage).Error
 }
