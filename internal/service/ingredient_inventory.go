@@ -22,6 +22,7 @@ func GetInventoryList(name, supplier, stockUser, begTime, endTime string, pn, pS
 	if begTime != "" && endTime != "" {
 		db = db.Where("created_at BETWEEN ? AND ?", begTime, endTime)
 	}
+	db = db.Preload("Ingredient")
 
 	return Pagination(db, []models.IngredientInventory{}, pn, pSize)
 }
@@ -123,25 +124,18 @@ func UpdateInventoryByInBound(db *gorm.DB, oldInBound *models.IngredientInBound)
 	return global.Db.Updates(&data).Error
 }
 
-func UpdateInventory(inventory *models.IngredientInventory) (*models.IngredientInventory, error) {
-	if inventory.ID == 0 {
-		return nil, errors.New("id is 0")
-	}
-	data, err := GetInventoryById(inventory.ID)
+func UpdateStockNum(db *gorm.DB, id int, total int) error {
+	inventory, err := GetInventoryById(id)
 	if err != nil {
-		return nil, err
+		return err
+	}
+	if inventory.StockNum+total < 0 {
+		return errors.New("stock not enough")
 	}
 
-	if data.IngredientID != inventory.IngredientID {
-		ingredients, err := GetIngredientsById(*inventory.IngredientID)
-		if err != nil {
-			return nil, err
-		}
+	inventory.StockNum += total
 
-		inventory.Ingredient = ingredients
-	}
-
-	return inventory, global.Db.Updates(&inventory).Error
+	return db.Updates(&inventory).Error
 }
 
 // GetInventoryFieldList 获取字段列表

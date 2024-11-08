@@ -37,9 +37,11 @@ func GetProduceManageIngredients(id int) ([]map[string]interface{}, error) {
 			return nil, err
 		}
 		requestData = append(requestData, map[string]interface{}{
-			"name":      ingredient.Name,
-			"quantity":  v.Quantity,
-			"stockUnit": v.IngredientInventory.StockUnit,
+			"inventory_id": v.IngredientInventory.ID,
+			"name":         ingredient.Name,
+			"quantity":     v.Quantity,
+			"stockUnit":    v.IngredientInventory.StockUnit,
+			"isCalculate":  v.IngredientInventory.Ingredient.IsCalculate,
 		})
 	}
 
@@ -50,7 +52,7 @@ func GetProduceManageById(id int) (*models.ProduceManage, error) {
 	db := global.Db.Model(&models.ProduceManage{})
 
 	data := &models.ProduceManage{}
-	err := db.Where("id = ?", id).First(&data).Error
+	err := db.Where("id = ?", id).Preload("Material").First(&data).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.New("user does not exist")
 	}
@@ -73,11 +75,6 @@ func SaveProduceManage(produceManage *models.ProduceManage) (*models.ProduceMana
 		}
 	}()
 
-	err = global.Db.Model(&models.ProduceManage{}).Create(&produceManage).Error
-	if err != nil {
-		return nil, err
-	}
-
 	for _, material := range produceManage.Material {
 		inventory := new(models.IngredientInventory)
 		inventory, err = GetInventoryById(material.IngredientID)
@@ -85,6 +82,11 @@ func SaveProduceManage(produceManage *models.ProduceManage) (*models.ProduceMana
 			return nil, err
 		}
 		material.IngredientInventory = inventory
+	}
+
+	err = global.Db.Model(&models.ProduceManage{}).Create(&produceManage).Error
+	if err != nil {
+		return nil, err
 	}
 
 	return produceManage, err
@@ -99,8 +101,21 @@ func UpdateProduceManage(produceManage *models.ProduceManage) (*models.ProduceMa
 		return nil, err
 	}
 
+	total, err := GetProduceByStatus(1)
+	if err != nil {
+		return nil, err
+	}
+	if total > 0 {
+		return nil, errors.New("exist produce, can not update")
+	}
+
 	if produceManage.Material == nil || len(produceManage.Material) == 0 {
 		return nil, errors.New("ingredients is empty")
+	}
+
+	err = RemoveIngredients(produceManage.ID)
+	if err != nil {
+		return nil, err
 	}
 
 	for _, material := range produceManage.Material {
@@ -128,6 +143,14 @@ func DelProduceManage(id int, username string) error {
 		return errors.New("user does not exist")
 	}
 
+	total, err := GetProduceByStatus(1)
+	if err != nil {
+		return err
+	}
+	if total > 0 {
+		return errors.New("exist produce, can not delete")
+	}
+
 	data.Operator = username
 	data.IsDeleted = true
 	err = global.Db.Updates(&data).Error
@@ -153,4 +176,29 @@ func GetProduceManageFieldList(field string) ([]string, error) {
 	}
 
 	return fields, nil
+}
+
+// UpdateIngredientStock 修改配料库存, b 时候为 true, 减少库存, b 时候为 false, 增加库存
+func UpdateIngredientStock(db *gorm.DB, id, amount int, b bool) error {
+	produceManage, err := GetProduceManageById(id)
+	if err != nil {
+		return err
+	}
+
+	for _, material := range produceManage.Material {
+		if b {
+			material.Quantity = 0 - material.Quantity
+		}
+		err = UpdateStockNum(db, material.IngredientID, amount*material.Quantity)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func RemoveIngredients(manageId int) error {
+	return global.Db.Model(&models.ProductMaterial{}).Where(
+		"produce_manage_id = ?", manageId).Delete(&models.ProductMaterial{}).Error
+
 }

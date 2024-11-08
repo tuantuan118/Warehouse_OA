@@ -16,7 +16,6 @@ func InitInBoundRouter(router *gin.RouterGroup) {
 	inBoundRouter := router.Group("in_bound")
 
 	inBoundRouter.GET("list", ib.list)
-	inBoundRouter.GET("fields", ib.fields)
 	inBoundRouter.POST("add", ib.add)
 	inBoundRouter.POST("update", ib.update)
 	inBoundRouter.POST("delete", ib.delete)
@@ -91,15 +90,4 @@ func (*InBound) delete(c *gin.Context) {
 	}
 
 	handler.Success(c, nil)
-}
-
-func (*InBound) fields(c *gin.Context) {
-	field := c.DefaultQuery("field", "")
-	data, err := service.GetInBoundFieldList(field)
-	if err != nil {
-		handler.InternalServerError(c, err)
-		return
-	}
-
-	handler.Success(c, data)
 }

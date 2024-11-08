@@ -10,21 +10,40 @@ import (
 
 func GetInBoundList(name, supplier, stockUser, begTime, endTime string, pn, pSize int) (interface{}, error) {
 	db := global.Db.Model(&models.IngredientInBound{})
+	totalDb := global.Db.Model(&models.IngredientInBound{})
 
 	if name != "" {
 		db = db.Where("name = ?", name)
+		totalDb = totalDb.Where("name = ?", name)
 	}
 	if supplier != "" {
 		db = db.Where("supplier = ?", supplier)
+		totalDb = totalDb.Where("supplier = ?", supplier)
 	}
 	if stockUser != "" {
 		db = db.Where("stock_user = ?", stockUser)
+		totalDb = totalDb.Where("stock_user = ?", stockUser)
 	}
 	if begTime != "" && endTime != "" {
 		db = db.Where("created_at BETWEEN ? AND ?", begTime, endTime)
+		totalDb = totalDb.Where("created_at BETWEEN ? AND ?", begTime, endTime)
 	}
 
-	return Pagination(db, []models.IngredientInBound{}, pn, pSize)
+	var totalPrice float64
+	err := totalDb.Select("SUM(total_price)").Scan(&totalPrice).Error
+	if err != nil {
+		return nil, err
+	}
+
+	db = db.Preload("Ingredient")
+	m, err := Pagination(db, []models.IngredientInBound{}, pn, pSize)
+	if err != nil {
+		return nil, err
+	}
+
+	m["sum_total_price"] = totalPrice
+
+	return m, nil
 }
 
 func GetInBoundById(id int) (*models.IngredientInBound, error) {
@@ -134,20 +153,4 @@ func DelInBound(id int, username string) error {
 	}
 
 	return global.Db.Delete(&data).Error
-}
-
-// GetInBoundFieldList 获取字段列表
-func GetInBoundFieldList(field string) ([]string, error) {
-	//db := global.Db.Model(&models.IngredientInBound{})
-	//switch field {
-	//default:
-	//	return nil, errors.New("field not exist")
-	//}
-	//fields := make([]string, 0)
-	//if err := db.Scan(&fields).Error; err != nil {
-	//	return nil, err
-	//}
-	//
-	//return fields, nil
-	return nil, nil
 }

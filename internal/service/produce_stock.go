@@ -34,6 +34,50 @@ func GetProduceStockById(id int) (*models.ProduceStock, error) {
 	return data, err
 }
 
+func SaveProduceStockByInBound(produce *models.Produce) error {
+	var total int64
+	db := global.Db.Model(&models.ProduceStock{})
+
+	db = db.Where("produce_manage_id = ?", produce.ProduceManageId)
+	db.Count(&total)
+	if total == 0 {
+		// 新增
+		quantity, err := GetProduceQuantity(produce.ProduceManageId)
+		if err != nil {
+			return err
+		}
+
+		amount := float64(quantity) * float64(produce.Amount) * produce.Ratio
+		_, err = SaveProduceStock(&models.ProduceStock{
+			BaseModel: models.BaseModel{
+				ID:       0,
+				Operator: produce.Operator,
+				Remark:   produce.Remark,
+			},
+			Name:               produce.Name,
+			Amount:             amount,
+			ProductIngredients: "",
+			ProduceManageId:    produce.ProduceManageId,
+		})
+		return err
+	}
+	return db.Update("amount", gorm.Expr("amount + ?", produce.Amount)).Error
+}
+
+func GetProduceQuantity(produceManageId int) (int, error) {
+	dataCount, err := GetProduceManageIngredients(produceManageId)
+	if err != nil {
+		return 0, err
+	}
+	var quantity int
+	for _, v := range dataCount {
+		if v["isCalculate"].(bool) {
+			quantity += v["quantity"].(int)
+		}
+	}
+	return quantity, nil
+}
+
 func SaveProduceStock(produce *models.ProduceStock) (*models.ProduceStock, error) {
 	err := global.Db.Model(&models.ProduceStock{}).Create(produce).Error
 

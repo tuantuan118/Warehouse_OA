@@ -7,7 +7,7 @@ import (
 
 func ParsePaginationParams(c *gin.Context) (int, int) {
 	pnStr := c.DefaultQuery("pageNo", "1")
-	pSizeStr := c.DefaultQuery("pageSize", "10")
+	pSizeStr := c.DefaultQuery("pageSize", "9999")
 
 	pn, err := strconv.Atoi(pnStr)
 	if err != nil || pn < 1 {

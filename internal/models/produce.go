@@ -9,7 +9,8 @@ type Produce struct {
 	Ratio           float64        `gorm:"type:decimal(10,2);not null" json:"ratio"`
 	Amount          int            `gorm:"type:int(11);not null" json:"amount"`
 	Status          int            `gorm:"type:int(11);not null" json:"status"`
+	FinishHour      int            `gorm:"-" json:"finishHour"`
 	FinishTime      time.Time      `gorm:"type:Time;not null" json:"finishTime"`
-	ProduceManageId *int           `gorm:"type:int(11)" json:"produceManageId"`
+	ProduceManageId int            `gorm:"type:int(11)" json:"produceManageId"`
 	ProduceManage   *ProduceManage `gorm:"foreignKey:ProduceManageId;" json:"produceManage"`
 }

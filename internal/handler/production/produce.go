@@ -20,6 +20,7 @@ func InitProduceRouter(router *gin.RouterGroup) {
 	produceRouter.POST("add", p.add)
 	produceRouter.POST("update", p.update)
 	produceRouter.POST("delete", p.delete)
+	produceRouter.POST("void", p.void)
 }
 
 func (*Produce) list(c *gin.Context) {
@@ -91,6 +92,24 @@ func (*Produce) delete(c *gin.Context) {
 
 	produce.Operator = c.GetString("userName")
 	err := service.DelProduce(produce.ID, produce.Operator)
+	if err != nil {
+		handler.InternalServerError(c, err)
+		return
+	}
+
+	handler.Success(c, nil)
+}
+
+func (*Produce) void(c *gin.Context) {
+	produce := &models.Produce{}
+	if err := c.ShouldBindJSON(produce); err != nil {
+		// 如果解析失败，返回 400 错误和错误信息
+		handler.BadRequest(c, err.Error())
+		return
+	}
+
+	produce.Operator = c.GetString("userName")
+	err := service.VoidProduce(produce.ID, produce.Operator)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return
