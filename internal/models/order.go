@@ -2,6 +2,7 @@ package models
 
 type Order struct {
 	BaseModel
+	ProduceId     int     `gorm:"-" json:"produceId"`
 	OrderNumber   string  `gorm:"type:varchar(256);not null" json:"orderNumber"`
 	Name          string  `gorm:"type:varchar(256);not null" json:"name"`
 	Specification string  `gorm:"type:varchar(256)" json:"specification"`

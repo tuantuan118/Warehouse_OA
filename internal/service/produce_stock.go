@@ -101,9 +101,7 @@ func GetProduceStockFieldList(field string) ([]string, error) {
 	db := global.Db.Model(&models.ProduceStock{})
 	switch field {
 	case "name":
-		db.Select("name")
-	case "orderNumber":
-		db.Select("order_number")
+		db = db.Select("name")
 	default:
 		return nil, errors.New("field not exist")
 	}

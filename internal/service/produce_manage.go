@@ -101,7 +101,7 @@ func UpdateProduceManage(produceManage *models.ProduceManage) (*models.ProduceMa
 		return nil, err
 	}
 
-	total, err := GetProduceByStatus(1)
+	total, err := GetProduceByStatus(produceManage.ID, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func DelProduceManage(id int, username string) error {
 		return errors.New("user does not exist")
 	}
 
-	total, err := GetProduceByStatus(1)
+	total, err := GetProduceByStatus(id, 1)
 	if err != nil {
 		return err
 	}

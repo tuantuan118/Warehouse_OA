@@ -245,9 +245,12 @@ func getTodayOrderCount() (int64, error) {
 	return total, err
 }
 
-func GetProduceByStatus(status int) (int64, error) {
+func GetProduceByStatus(id, status int) (int64, error) {
 	var total int64
-	err := global.Db.Model(&models.Produce{}).Where("status = ?", status).Count(&total).Error
+	db := global.Db.Model(&models.Produce{})
+	db = db.Where("produce_manage_id = ?", id)
+	db = db.Where("status = ?", status)
+	err := db.Count(&total).Error
 
 	return total, err
 }
