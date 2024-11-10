@@ -8,7 +8,7 @@ type IngredientInBound struct {
 	Price         float64      `gorm:"type:decimal(12,2)" json:"price"`
 	TotalPrice    float64      `gorm:"type:decimal(12,2)" json:"totalPrice"`
 	StockNum      int          `gorm:"type:int(11)" json:"stockNum"`
-	StockUnit     string       `gorm:"type:varchar(256)" json:"stockUnit"`
+	StockUnit     int          `gorm:"type:int(2)" json:"stockUnit"`
 	StockUser     string       `gorm:"type:varchar(256)" json:"stockUser"`
 	StockTime     string       `gorm:"type:varchar(256)" json:"stockTime"`
 }

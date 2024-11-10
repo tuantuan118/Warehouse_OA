@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"warehouse_oa/internal/global"
 	"warehouse_oa/internal/models"
@@ -45,13 +46,11 @@ func SaveInventoryByInBound(db *gorm.DB, inBound *models.IngredientInBound) erro
 
 	db = db.Model(&models.IngredientInventory{})
 	db = db.Where("ingredient_id = ?", *inBound.IngredientID)
-	if inBound.Specification != "" {
-		db = db.Where("specification = ?", inBound.Specification)
-	}
-	if inBound.StockUnit != "" {
-		db = db.Where("stock_unit = ?", inBound.StockUnit)
+	if inBound.StockUnit == 0 {
+		return errors.New("stock unit error")
 	}
 
+	db = db.Where("stock_unit = ?", inBound.StockUnit)
 	var err error
 	err = db.Count(&total).Error
 	if err != nil {
@@ -65,7 +64,6 @@ func SaveInventoryByInBound(db *gorm.DB, inBound *models.IngredientInBound) erro
 			IngredientID:  inBound.IngredientID,
 			Ingredient:    inBound.Ingredient,
 			Specification: inBound.Specification,
-			TotalPrice:    inBound.TotalPrice,
 			StockNum:      inBound.StockNum,
 			StockUnit:     inBound.StockUnit,
 		})
@@ -76,9 +74,9 @@ func SaveInventoryByInBound(db *gorm.DB, inBound *models.IngredientInBound) erro
 	if err != nil {
 		return err
 	}
+
 	data.StockNum += inBound.StockNum
-	data.TotalPrice += inBound.TotalPrice
-	return global.Db.Updates(&data).Error
+	return db.Updates(&data).Error
 }
 
 func SaveInventory(inventory *models.IngredientInventory) (*models.IngredientInventory, error) {
@@ -100,12 +98,10 @@ func UpdateInventoryByInBound(db *gorm.DB, oldInBound *models.IngredientInBound)
 
 	db = db.Model(&models.IngredientInventory{})
 	db = db.Where("ingredient_id = ?", *oldInBound.IngredientID)
-	if oldInBound.Specification != "" {
-		db = db.Where("specification = ?", oldInBound.Specification)
+	if oldInBound.StockUnit == 0 {
+		return errors.New("stock unit error")
 	}
-	if oldInBound.StockUnit != "" {
-		db = db.Where("stock_unit = ?", oldInBound.StockUnit)
-	}
+	db = db.Where("stock_unit = ?", oldInBound.StockUnit)
 
 	var err error
 	err = db.Count(&total).Error
@@ -119,12 +115,17 @@ func UpdateInventoryByInBound(db *gorm.DB, oldInBound *models.IngredientInBound)
 	if err != nil {
 		return err
 	}
-	data.StockNum -= oldInBound.StockNum
-	data.TotalPrice -= oldInBound.TotalPrice
+
+	data.StockNum += oldInBound.StockNum
 	return global.Db.Updates(&data).Error
 }
 
-func UpdateStockNum(db *gorm.DB, id int, total int) error {
+func UpdateIngredientStockNum(db *gorm.DB, id int, total int) error {
+	logrus.Infoln(total)
+	if id == 0 {
+		return errors.New("id is 0")
+	}
+
 	inventory, err := GetInventoryById(id)
 	if err != nil {
 		return err

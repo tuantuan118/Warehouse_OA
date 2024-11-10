@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"warehouse_oa/internal/global"
 	"warehouse_oa/internal/models"
@@ -40,28 +41,36 @@ func SaveProduceStockByInBound(produce *models.Produce) error {
 
 	db = db.Where("produce_manage_id = ?", produce.ProduceManageId)
 	db.Count(&total)
-	if total == 0 {
-		// 新增
-		quantity, err := GetProduceQuantity(produce.ProduceManageId)
-		if err != nil {
-			return err
-		}
 
-		amount := float64(quantity) * float64(produce.Amount) * produce.Ratio
+	quantity, err := GetProduceQuantity(produce.ProduceManageId)
+	if err != nil {
+		return err
+	}
+	amount := float64(quantity) * float64(produce.Amount) * produce.Ratio / 100
+
+	logrus.Infoln(*produce)
+
+	if total == 0 {
 		_, err = SaveProduceStock(&models.ProduceStock{
 			BaseModel: models.BaseModel{
-				ID:       0,
 				Operator: produce.Operator,
 				Remark:   produce.Remark,
 			},
-			Name:               produce.Name,
-			Amount:             amount,
-			ProductIngredients: "",
-			ProduceManageId:    produce.ProduceManageId,
+			Name:            produce.Name,
+			Amount:          amount,
+			ProduceManageId: produce.ProduceManageId,
 		})
 		return err
 	}
-	return db.Update("amount", gorm.Expr("amount + ?", produce.Amount)).Error
+
+	data := &models.ProduceStock{}
+	err = db.First(&data).Error
+	if err != nil {
+		return err
+	}
+	data.Amount += amount
+
+	return db.Updates(&data).Error
 }
 
 func GetProduceQuantity(produceManageId int) (int, error) {
@@ -79,21 +88,25 @@ func GetProduceQuantity(produceManageId int) (int, error) {
 }
 
 func SaveProduceStock(produce *models.ProduceStock) (*models.ProduceStock, error) {
-	err := global.Db.Model(&models.ProduceStock{}).Create(produce).Error
+	err := global.Db.Model(&models.ProduceStock{}).Create(&produce).Error
 
 	return produce, err
 }
-
-func UpdateProduceStock(produce *models.ProduceStock) (*models.ProduceStock, error) {
-	if produce.ID == 0 {
-		return nil, errors.New("id is 0")
+func UpdateProduceStockNum(db *gorm.DB, id int, total int) error {
+	if id == 0 {
+		return errors.New("id is 0")
 	}
-	_, err := GetProduceStockById(produce.ID)
+	produce, err := GetProduceStockById(id)
 	if err != nil {
-		return nil, err
+		return err
+	}
+	if produce.Amount+float64(total) < 0 {
+		return errors.New("stock not enough")
 	}
 
-	return produce, global.Db.Updates(&produce).Error
+	produce.Amount += float64(total)
+
+	return db.Updates(&produce).Error
 }
 
 // GetProduceStockFieldList 获取字段列表

@@ -8,7 +8,7 @@ import (
 )
 
 func Ticker() {
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop() // 确保程序退出时停止 ticker
 
 	// 使用循环来处理每次触发的事件
@@ -22,20 +22,18 @@ func Ticker() {
 		err := db.Find(&produce).Error
 		if err != nil {
 			logrus.Infoln("定时任务查找产品库存错误: ", err.Error())
-			return
 		}
+
 		for _, v := range produce {
 			v.Status = 2
-			_, err = UpdateProduce(&v)
-			if err != nil {
-				logrus.Infoln("定时任务修改产品库存错误: ", err.Error())
-				return
-			}
-
 			err = SaveProduceStockByInBound(&v)
 			if err != nil {
 				logrus.Infoln("定时任务新增产品库存错误: ", err.Error())
-				return
+			}
+
+			_, err = UpdateProduce(&v)
+			if err != nil {
+				logrus.Infoln("定时任务修改产品库存错误: ", err.Error())
 			}
 		}
 	}

@@ -2,6 +2,7 @@ package order
 
 import (
 	"github.com/gin-gonic/gin"
+	"net/http"
 	"warehouse_oa/internal/handler"
 	"warehouse_oa/internal/models"
 	"warehouse_oa/internal/service"
@@ -17,9 +18,13 @@ func InitOrderRouter(router *gin.RouterGroup) {
 
 	orderRouter.GET("list", o.list)
 	orderRouter.GET("fields", o.fields)
+	orderRouter.GET("export", o.export)
 	orderRouter.POST("add", o.add)
 	orderRouter.POST("update", o.update)
+	orderRouter.POST("finishOrder", o.finishOrder)
 	orderRouter.POST("delete", o.delete)
+	orderRouter.POST("void", o.void)
+	orderRouter.POST("saveOutBound", o.saveOutBound)
 }
 
 func (*Order) list(c *gin.Context) {
@@ -78,6 +83,42 @@ func (*Order) update(c *gin.Context) {
 	handler.Success(c, data)
 }
 
+func (*Order) finishOrder(c *gin.Context) {
+	order := &models.Order{}
+	if err := c.ShouldBindJSON(order); err != nil {
+		// 如果解析失败，返回 400 错误和错误信息
+		handler.BadRequest(c, err.Error())
+		return
+	}
+
+	order.Operator = c.GetString("userName")
+	data, err := service.FinishOrder(order)
+	if err != nil {
+		handler.InternalServerError(c, err)
+		return
+	}
+
+	handler.Success(c, data)
+}
+
+func (*Order) void(c *gin.Context) {
+	order := &models.Order{}
+	if err := c.ShouldBindJSON(order); err != nil {
+		// 如果解析失败，返回 400 错误和错误信息
+		handler.BadRequest(c, err.Error())
+		return
+	}
+
+	order.Operator = c.GetString("userName")
+	err := service.VoidOrder(order.ID, order.Operator)
+	if err != nil {
+		handler.InternalServerError(c, err)
+		return
+	}
+
+	handler.Success(c, nil)
+}
+
 func (*Order) delete(c *gin.Context) {
 	order := &models.Order{}
 	if err := c.ShouldBindJSON(order); err != nil {
@@ -94,6 +135,53 @@ func (*Order) delete(c *gin.Context) {
 	}
 
 	handler.Success(c, nil)
+}
+
+func (*Order) saveOutBound(c *gin.Context) {
+	order := &models.Order{}
+	if err := c.ShouldBindJSON(order); err != nil {
+		// 如果解析失败，返回 400 错误和错误信息
+		handler.BadRequest(c, err.Error())
+		return
+	}
+
+	order.Operator = c.GetString("userName")
+	err := service.SaveOutBound(order.ID, order.Operator)
+	if err != nil {
+		handler.InternalServerError(c, err)
+		return
+	}
+
+	handler.Success(c, nil)
+}
+
+func (*Order) export(c *gin.Context) {
+	pn := 1
+	pSize := 9999
+	order := &models.Order{
+		Name:          c.DefaultQuery("name", ""),
+		OrderNumber:   c.DefaultQuery("orderNumber", ""),
+		Specification: c.DefaultQuery("specification", ""),
+		CustomerName:  c.DefaultQuery("customerName", ""),
+	}
+	begTime := c.DefaultQuery("begTime", "")
+	endTime := c.DefaultQuery("endTime", "")
+
+	data, err := service.ExportOrder(order, begTime, endTime, pn, pSize)
+	if err != nil {
+		handler.InternalServerError(c, err)
+		return
+	}
+
+	c.Header("Content-Type", "application/octet-stream")
+	c.Header("Content-Disposition", `attachment; filename="销售开单.xlsx"`)
+	c.Header("Content-Transfer-Encoding", "binary")
+
+	// 将 Excel 文件写入到 HTTP 响应中
+	if err = data.Write(c.Writer); err != nil {
+		c.String(http.StatusInternalServerError, "文件生成失败")
+		return
+	}
 }
 
 func (*Order) fields(c *gin.Context) {

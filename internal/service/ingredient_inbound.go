@@ -119,17 +119,15 @@ func UpdateInBound(inBound *models.IngredientInBound) (*models.IngredientInBound
 		}
 	}()
 
-	err = SaveInventoryByInBound(tx, inBound)
+	inBound.TotalPrice = inBound.Price * float64(inBound.StockNum)
+	err = tx.Updates(&inBound).Error
 	if err != nil {
 		return nil, err
 	}
-	err = UpdateInventoryByInBound(tx, oldData)
-	if err != nil {
-		return nil, err
-	}
-	err = global.Db.Updates(&inBound).Error
 
-	return inBound, err
+	inBound.StockNum = inBound.StockNum - oldData.StockNum
+
+	return inBound, SaveInventoryByInBound(tx, inBound)
 }
 
 func DelInBound(id int, username string) error {
@@ -147,10 +145,25 @@ func DelInBound(id int, username string) error {
 
 	data.Operator = username
 	data.IsDeleted = true
-	err = global.Db.Updates(&data).Error
+
+	db := global.Db
+	tx := db.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+	err = tx.Updates(&data).Error
+	if err != nil {
+		return err
+	}
+	err = tx.Delete(&data).Error
 	if err != nil {
 		return err
 	}
 
-	return global.Db.Delete(&data).Error
+	data.StockNum = 0 - data.StockNum
+	return UpdateInventoryByInBound(tx, data)
 }

@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"time"
 	"warehouse_oa/internal/global"
@@ -69,7 +70,7 @@ func SaveProduce(produce *models.Produce) (*models.Produce, error) {
 	}()
 
 	today := time.Now().Format("20060102")
-	total, err := getTodayOrderCount()
+	total, err := getTodayProduceCount()
 	if err != nil {
 		return nil, err
 	}
@@ -99,10 +100,6 @@ func UpdateProduce(produce *models.Produce) (*models.Produce, error) {
 		return nil, err
 	}
 
-	produce.OrderNumber = ""
-	produce.Name = ""
-	produce.ProduceManage = nil
-
 	if oldData.Status == 2 || oldData.Status == 3 {
 		return nil, errors.New("produce has been finished, can not update")
 	}
@@ -117,19 +114,23 @@ func UpdateProduce(produce *models.Produce) (*models.Produce, error) {
 		}
 	}()
 
+	if oldData.Amount != produce.Amount {
+		margin := oldData.Amount - produce.Amount
+
+		logrus.Infoln(produce)
+		err = UpdateIngredientStock(tx, oldData.ProduceManageId, margin, false)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	produce.OrderNumber = ""
+	produce.Name = ""
+	produce.ProduceManage = nil
+
 	err = tx.Updates(&produce).Error
 	if err != nil {
 		return nil, err
-	}
-
-	if oldData.Amount != produce.Amount {
-		margin := oldData.Amount - produce.Amount
-		if margin > 0 {
-			err = UpdateIngredientStock(tx, produce.ProduceManageId, margin, false)
-			if err != nil {
-				return nil, err
-			}
-		}
 	}
 
 	return produce, err
@@ -234,7 +235,7 @@ func GetProduceFieldList(field string) ([]string, error) {
 	return fields, nil
 }
 
-func getTodayOrderCount() (int64, error) {
+func getTodayProduceCount() (int64, error) {
 	today := time.Now().Format("2006-01-02")
 	startOfDay, _ := time.Parse("2006-01-02", today)
 

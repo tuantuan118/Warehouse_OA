@@ -2,6 +2,7 @@ package user
 
 import (
 	"github.com/gin-gonic/gin"
+	"strconv"
 	"warehouse_oa/internal/handler"
 	"warehouse_oa/internal/models"
 	"warehouse_oa/internal/service"
@@ -128,7 +129,12 @@ func (*User) setRoles(c *gin.Context) {
 }
 
 func (*User) getPermissions(c *gin.Context) {
-	id := utils.DefaultQueryInt(c, "id", 0)
+	idStr := c.GetString("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		handler.BadRequest(c, "id参数错误")
+		return
+	}
 	data, err := service.GetRolePermissions(id)
 	if err != nil {
 		handler.InternalServerError(c, err)

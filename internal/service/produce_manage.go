@@ -189,7 +189,7 @@ func UpdateIngredientStock(db *gorm.DB, id, amount int, b bool) error {
 		if b {
 			material.Quantity = 0 - material.Quantity
 		}
-		err = UpdateStockNum(db, material.IngredientID, amount*material.Quantity)
+		err = UpdateIngredientStockNum(db, material.IngredientID, amount*material.Quantity)
 		if err != nil {
 			return err
 		}
