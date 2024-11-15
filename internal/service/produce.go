@@ -16,6 +16,9 @@ func GetProduceList(produce *models.Produce,
 	pn, pSize int) (interface{}, error) {
 	db := global.Db.Model(&models.Produce{})
 
+	if produce.OrderNumber != "" {
+		db = db.Where("order_number LIKE ?", produce.OrderNumber)
+	}
 	if produce.Name != "" {
 		db = db.Where("name = ?", produce.Name)
 	}
@@ -23,10 +26,10 @@ func GetProduceList(produce *models.Produce,
 		db = db.Where("status = ?", produce.Status)
 	}
 	if begReportingTime != "" && endReportingTime != "" {
-		db = db.Where("add_time BETWEEN ? AND ?", begReportingTime, endReportingTime)
+		db = db.Where("DATE_FORMAT(add_time, '%Y-%m-%d') BETWEEN ? AND ?", begReportingTime, endReportingTime)
 	}
 	if begFinishTime != "" && endFinishTime != "" {
-		db = db.Where("finish_time BETWEEN ? AND ?", begFinishTime, endFinishTime)
+		db = db.Where("DATE_FORMAT(finish_time, '%Y-%m-%d') BETWEEN ? AND ?", begFinishTime, endFinishTime)
 	}
 
 	return Pagination(db, []models.Produce{}, pn, pSize)
@@ -237,11 +240,10 @@ func GetProduceFieldList(field string) ([]string, error) {
 
 func getTodayProduceCount() (int64, error) {
 	today := time.Now().Format("2006-01-02")
-	startOfDay, _ := time.Parse("2006-01-02", today)
 
 	var total int64
 	err := global.Db.Model(&models.Produce{}).Where(
-		"add_time >= ?", startOfDay).Count(&total).Error
+		"DATE_FORMAT(add_time, '%Y-%m-%d') >= ?", today).Count(&total).Error
 
 	return total, err
 }

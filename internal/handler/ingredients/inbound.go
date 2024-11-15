@@ -2,6 +2,7 @@ package ingredients
 
 import (
 	"github.com/gin-gonic/gin"
+	"net/http"
 	"warehouse_oa/internal/handler"
 	"warehouse_oa/internal/models"
 	"warehouse_oa/internal/service"
@@ -16,6 +17,7 @@ func InitInBoundRouter(router *gin.RouterGroup) {
 	inBoundRouter := router.Group("in_bound")
 
 	inBoundRouter.GET("list", ib.list)
+	inBoundRouter.GET("export", ib.export)
 	inBoundRouter.POST("add", ib.add)
 	inBoundRouter.POST("update", ib.update)
 	inBoundRouter.POST("delete", ib.delete)
@@ -90,4 +92,28 @@ func (*InBound) delete(c *gin.Context) {
 	}
 
 	handler.Success(c, nil)
+}
+
+func (*InBound) export(c *gin.Context) {
+	name := c.DefaultQuery("name", "")
+	supplier := c.DefaultQuery("supplier", "")
+	stockUser := c.DefaultQuery("stockUser", "")
+	begTime := c.DefaultQuery("begTime", "")
+	endTime := c.DefaultQuery("endTime", "")
+
+	data, err := service.ExportIngredients(name, supplier, stockUser, begTime, endTime)
+	if err != nil {
+		handler.InternalServerError(c, err)
+		return
+	}
+
+	c.Header("Content-Type", "application/octet-stream")
+	c.Header("Content-Disposition", `attachment; filename="配料入库.xlsx"`)
+	c.Header("Content-Transfer-Encoding", "binary")
+
+	// 将 Excel 文件写入到 HTTP 响应中
+	if err = data.Write(c.Writer); err != nil {
+		c.String(http.StatusInternalServerError, "文件生成失败")
+		return
+	}
 }

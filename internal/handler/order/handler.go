@@ -33,12 +33,13 @@ func (*Order) list(c *gin.Context) {
 		Name:          c.DefaultQuery("name", ""),
 		OrderNumber:   c.DefaultQuery("orderNumber", ""),
 		Specification: c.DefaultQuery("specification", ""),
-		CustomerName:  c.DefaultQuery("customerName", ""),
+		CustomerId:    utils.DefaultQueryInt(c, "customerId", 0),
 	}
 	begTime := c.DefaultQuery("begTime", "")
 	endTime := c.DefaultQuery("endTime", "")
+	userId := c.GetInt("userId")
 
-	data, err := service.GetOrderList(order, begTime, endTime, pn, pSize)
+	data, err := service.GetOrderList(order, begTime, endTime, pn, pSize, userId)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return
@@ -156,18 +157,19 @@ func (*Order) saveOutBound(c *gin.Context) {
 }
 
 func (*Order) export(c *gin.Context) {
-	pn := 1
-	pSize := 9999
 	order := &models.Order{
+		BaseModel: models.BaseModel{
+			ID: utils.DefaultQueryInt(c, "id", 0),
+		},
 		Name:          c.DefaultQuery("name", ""),
 		OrderNumber:   c.DefaultQuery("orderNumber", ""),
 		Specification: c.DefaultQuery("specification", ""),
-		CustomerName:  c.DefaultQuery("customerName", ""),
+		CustomerId:    utils.DefaultQueryInt(c, "customerId", 0),
 	}
 	begTime := c.DefaultQuery("begTime", "")
 	endTime := c.DefaultQuery("endTime", "")
 
-	data, err := service.ExportOrder(order, begTime, endTime, pn, pSize)
+	data, err := service.ExportOrder(order, begTime, endTime)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return

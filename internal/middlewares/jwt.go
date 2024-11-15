@@ -35,6 +35,7 @@ func JWTAuth() gin.HandlerFunc {
 			ctx.Abort()
 			return
 		}
+
 		ctx.Set("claims", claims)
 		ctx.Set("userId", claims.Id)
 		ctx.Set("userName", claims.Name)

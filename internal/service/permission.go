@@ -21,7 +21,26 @@ func GetPermissionList(permission *models.Permission, pn, pSize int) (interface{
 		db = db.Where("type = ?", permission.Type)
 	}
 
-	return Pagination(db, []models.Permission{}, pn, pSize)
+	data := make([]models.Permission, 0)
+
+	var total int64
+	if err := db.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	if pn != 0 && pSize != 0 {
+		offset := (pn - 1) * pSize
+		db = db.Order("parent_id asc, 'order' desc").Limit(pSize).Offset(offset)
+	}
+
+	err := db.Find(&data).Error
+
+	return map[string]interface{}{
+		"data":       data,
+		"pageNo":     pn,
+		"pageSize":   pSize,
+		"totalCount": total,
+	}, err
 }
 
 func SavePermission(permission *models.Permission) (*models.Permission, error) {

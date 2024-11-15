@@ -26,8 +26,9 @@ func InitProduceRouter(router *gin.RouterGroup) {
 func (*Produce) list(c *gin.Context) {
 	pn, pSize := utils.ParsePaginationParams(c)
 	produce := &models.Produce{
-		Name:   c.DefaultQuery("name", ""),
-		Status: utils.DefaultQueryInt(c, "status", -1),
+		OrderNumber: c.DefaultQuery("orderNumber", ""),
+		Name:        c.DefaultQuery("name", ""),
+		Status:      utils.DefaultQueryInt(c, "status", -1),
 	}
 	begReportingTime := c.DefaultQuery("begReportingTime", "")
 	endReportingTime := c.DefaultQuery("endReportingTime", "")

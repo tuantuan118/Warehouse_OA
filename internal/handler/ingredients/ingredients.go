@@ -25,7 +25,8 @@ func InitIngredientsRouter(router *gin.RouterGroup) {
 func (*Ingredients) list(c *gin.Context) {
 	pn, pSize := utils.ParsePaginationParams(c)
 	ingredients := &models.Ingredients{
-		Name: c.DefaultQuery("name", ""),
+		Name:     c.DefaultQuery("name", ""),
+		Supplier: c.DefaultQuery("supplier", ""),
 	}
 	data, err := service.GetIngredientsList(ingredients, pn, pSize)
 	if err != nil {

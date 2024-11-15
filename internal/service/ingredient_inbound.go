@@ -2,10 +2,14 @@ package service
 
 import (
 	"errors"
+	"fmt"
+	"github.com/sirupsen/logrus"
+	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 	"math/big"
 	"warehouse_oa/internal/global"
 	"warehouse_oa/internal/models"
+	"warehouse_oa/utils"
 )
 
 func GetInBoundList(name, supplier, stockUser, begTime, endTime string, pn, pSize int) (interface{}, error) {
@@ -13,24 +17,32 @@ func GetInBoundList(name, supplier, stockUser, begTime, endTime string, pn, pSiz
 	totalDb := global.Db.Model(&models.IngredientInBound{})
 
 	if name != "" {
-		db = db.Where("name = ?", name)
-		totalDb = totalDb.Where("name = ?", name)
+		idList, err := GetIngredientsByName(name)
+		if err != nil {
+			return nil, err
+		}
+		db = db.Where("ingredient_id in ?", idList)
+		totalDb = totalDb.Where("ingredient_id in ?", idList)
 	}
 	if supplier != "" {
-		db = db.Where("supplier = ?", supplier)
-		totalDb = totalDb.Where("supplier = ?", supplier)
+		idList, err := GetIngredientsBySupplier(supplier)
+		if err != nil {
+			return nil, err
+		}
+		db = db.Where("ingredient_id in ?", idList)
+		totalDb = totalDb.Where("ingredient_id in ?", idList)
 	}
 	if stockUser != "" {
 		db = db.Where("stock_user = ?", stockUser)
 		totalDb = totalDb.Where("stock_user = ?", stockUser)
 	}
 	if begTime != "" && endTime != "" {
-		db = db.Where("created_at BETWEEN ? AND ?", begTime, endTime)
-		totalDb = totalDb.Where("created_at BETWEEN ? AND ?", begTime, endTime)
+		db = db.Where("DATE_FORMAT(stock_time, '%Y-%m-%d') BETWEEN ? AND ?", begTime, endTime)
+		totalDb = totalDb.Where("DATE_FORMAT(stock_time, '%Y-%m-%d') BETWEEN ? AND ?", begTime, endTime)
 	}
 
 	var totalPrice float64
-	err := totalDb.Select("SUM(total_price)").Scan(&totalPrice).Error
+	err := totalDb.Select("COALESCE(SUM(total_price), 0)").Scan(&totalPrice).Error
 	if err != nil {
 		return nil, err
 	}
@@ -166,4 +178,100 @@ func DelInBound(id int, username string) error {
 
 	data.StockNum = 0 - data.StockNum
 	return UpdateInventoryByInBound(tx, data)
+}
+
+func ExportIngredients(name, supplier, stockUser, begTime, endTime string) (*excelize.File, error) {
+	db := global.Db.Model(&models.IngredientInBound{})
+	totalDb := global.Db.Model(&models.IngredientInBound{})
+
+	if name != "" {
+		idList, err := GetIngredientsByName(name)
+		if err != nil {
+			return nil, err
+		}
+		db = db.Where("ingredient_id in ?", idList)
+		totalDb = totalDb.Where("ingredient_id in ?", idList)
+	}
+	if supplier != "" {
+		idList, err := GetIngredientsBySupplier(supplier)
+		if err != nil {
+			return nil, err
+		}
+		db = db.Where("ingredient_id in ?", idList)
+		totalDb = totalDb.Where("ingredient_id in ?", idList)
+	}
+	if stockUser != "" {
+		db = db.Where("stock_user = ?", stockUser)
+		totalDb = totalDb.Where("stock_user = ?", stockUser)
+	}
+	if begTime != "" && endTime != "" {
+		db = db.Where("DATE_FORMAT(stock_time, '%Y-%m-%d') BETWEEN ? AND ?", begTime, endTime)
+		totalDb = totalDb.Where("DATE_FORMAT(stock_time, '%Y-%m-%d') BETWEEN ? AND ?", begTime, endTime)
+	}
+
+	var totalPrice float64
+	err := totalDb.Select("COALESCE(SUM(total_price), 0)").Scan(&totalPrice).Error
+	if err != nil {
+		return nil, err
+	}
+
+	data := make([]models.IngredientInBound, 0)
+	err = db.Preload("Ingredient").Find(&data).Error
+	if err != nil {
+		logrus.Infoln("导出订单错误: ", err.Error())
+	}
+
+	keyList := []string{
+		"配料名称",
+		"配料供应商",
+		"单价（元）",
+		"金额（元）",
+		"入库数量",
+		"入库人员",
+		"入库时间",
+		"备注",
+	}
+
+	valueList := make([]map[string]interface{}, 0)
+	for _, v := range data {
+		valueList = append(valueList, map[string]interface{}{
+			"配料名称":  v.Ingredient.Name,
+			"配料供应商": v.Ingredient.Supplier,
+			"单价（元）": v.Price,
+			"金额（元）": v.TotalPrice,
+			"入库数量":  fmt.Sprintf("%d%s", v.StockNum, returnUnit(v.StockUnit)),
+			"入库人员":  v.StockUser,
+			"入库时间":  v.StockTime,
+			"备注":    v.Remark,
+		})
+	}
+	valueList = append(valueList, map[string]interface{}{
+		"金额（元）": totalPrice,
+	})
+
+	return utils.ExportExcel(keyList, valueList)
+}
+
+func returnUnit(i int) string {
+	switch i {
+	case 1:
+		return "斤"
+	case 2:
+		return "克"
+	case 3:
+		return "件"
+	case 4:
+		return "个"
+	case 5:
+		return "张"
+	case 6:
+		return "盆"
+	case 7:
+		return "桶"
+	case 8:
+		return "包"
+	case 9:
+		return "箱"
+	}
+	return ""
 }

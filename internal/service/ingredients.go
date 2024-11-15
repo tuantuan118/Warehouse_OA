@@ -13,6 +13,9 @@ func GetIngredientsList(ingredients *models.Ingredients, pn, pSize int) (interfa
 	if ingredients.Name != "" {
 		db = db.Where("name = ?", ingredients.Name)
 	}
+	if ingredients.Supplier != "" {
+		db = db.Where("supplier = ?", ingredients.Supplier)
+	}
 
 	return Pagination(db, []models.Ingredients{}, pn, pSize)
 }
@@ -27,6 +30,30 @@ func GetIngredientsById(id int) (*models.Ingredients, error) {
 	}
 
 	return data, err
+}
+
+func GetIngredientsByName(name string) ([]int, error) {
+	db := global.Db.Model(&models.Ingredients{})
+
+	idList := make([]int, 0)
+	err := db.Select("id").Where("name = ?", name).First(&idList).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.New("user does not exist")
+	}
+
+	return idList, err
+}
+
+func GetIngredientsBySupplier(supplier string) ([]int, error) {
+	db := global.Db.Model(&models.Ingredients{})
+
+	idList := make([]int, 0)
+	err := db.Select("id").Where("supplier = ?", supplier).First(&idList).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.New("user does not exist")
+	}
+
+	return idList, err
 }
 
 func SaveIngredients(ingredients *models.Ingredients) (*models.Ingredients, error) {
@@ -49,7 +76,13 @@ func UpdateIngredients(ingredients *models.Ingredients) (*models.Ingredients, er
 		return nil, err
 	}
 
-	return ingredients, global.Db.Updates(&ingredients).Error
+	return ingredients, global.Db.Select(
+		"operator",
+		"remark",
+		"name",
+		"supplier",
+		"is_calculate",
+	).Updates(&ingredients).Error
 }
 
 func DelIngredients(id int, username string) error {

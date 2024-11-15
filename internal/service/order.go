@@ -13,7 +13,7 @@ import (
 	"warehouse_oa/utils"
 )
 
-func GetOrderList(order *models.Order, begTime, endTime string, pn, pSize int) (interface{}, error) {
+func GetOrderList(order *models.Order, begTime, endTime string, pn, pSize int, userId int) (interface{}, error) {
 	db := global.Db.Model(&models.Order{})
 
 	if order.OrderNumber != "" {
@@ -25,14 +25,24 @@ func GetOrderList(order *models.Order, begTime, endTime string, pn, pSize int) (
 	if order.Specification != "" {
 		db = db.Where("specification = ?", order.Specification)
 	}
-	if order.CustomerName != "" {
-		db = db.Where("customer_name = ?", order.CustomerName)
+	if order.CustomerId != 0 {
+		db = db.Where("customer_id = ?", order.CustomerId)
 	}
 	if order.Status > 0 {
 		db = db.Where("status = ?", order.Status)
 	}
 	if begTime != "" && endTime != "" {
-		db = db.Where("add_time BETWEEN ? AND ?", begTime, endTime)
+		db = db.Where("DATE_FORMAT(add_time, '%Y-%m-%d') BETWEEN ? AND ?", begTime, endTime)
+	}
+	db = db.Preload("UserList")
+	db = db.Preload("Customer")
+
+	b, err := getAdmin(userId)
+	if err != nil {
+		return nil, err
+	}
+	if !b {
+		db = db.Where(" id in (select order_id from tb_order_user where user_id = ?)", userId)
 	}
 
 	return Pagination(db, []models.Order{}, pn, pSize)
@@ -67,6 +77,12 @@ func SaveOrder(order *models.Order) (*models.Order, error) {
 		return nil, err
 	}
 
+	customer, err := GetCustomerById(order.CustomerId)
+	if err != nil {
+		return nil, err
+	}
+	order.Customer = customer
+
 	today := time.Now().Format("20060102")
 	total, err := getTodayOrderCount()
 	if err != nil {
@@ -81,22 +97,7 @@ func SaveOrder(order *models.Order) (*models.Order, error) {
 	order.UnFinishPrice = totalPrice
 	order.Status = 1
 
-	db := global.Db
-	tx := db.Begin()
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		} else {
-			tx.Commit()
-		}
-	}()
-
-	err = UpdateProduceStockNum(tx, order.ProduceId, 0-order.Amount)
-	if err != nil {
-		return nil, err
-	}
-
-	err = tx.Model(&models.Order{}).Create(order).Error
+	err = global.Db.Model(&models.Order{}).Create(order).Error
 
 	return order, err
 }
@@ -120,6 +121,11 @@ func UpdateOrder(order *models.Order) (*models.Order, error) {
 		order.UnFinishPrice = totalPrice
 	}
 
+	customer, err := GetCustomerById(order.CustomerId)
+	if err != nil {
+		return nil, err
+	}
+	order.Customer = customer
 	order.OrderNumber = ""
 	order.Name = ""
 	order.Status = 0
@@ -212,18 +218,35 @@ func DelOrder(id int, username string) error {
 
 // SaveOutBound 出库
 func SaveOutBound(id int, username string) error {
-	return global.Db.Updates(&models.Order{
-		BaseModel: models.BaseModel{
-			ID:       id,
-			Operator: username,
-		},
-		Status: 2,
-	}).Error
+	data, err := GetOrderById(id)
+
+	data.Operator = username
+	data.Status = 2
+
+	db := global.Db
+	tx := db.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	err = UpdateProduceStockNum(tx, data.ProduceId, 0-data.Amount)
+	if err != nil {
+		return err
+	}
+
+	return tx.Updates(&data).Error
 }
 
-func ExportOrder(order *models.Order, begTime, endTime string, pn, pSize int) (*excelize.File, error) {
+func ExportOrder(order *models.Order, begTime, endTime string) (*excelize.File, error) {
 	db := global.Db.Model(&models.Order{})
 
+	if order.ID != 0 {
+		db = db.Where("id = ?", order.ID)
+	}
 	if order.OrderNumber != "" {
 		db = db.Where("order_number = ?", order.OrderNumber)
 	}
@@ -233,8 +256,8 @@ func ExportOrder(order *models.Order, begTime, endTime string, pn, pSize int) (*
 	if order.Specification != "" {
 		db = db.Where("specification = ?", order.Specification)
 	}
-	if order.CustomerName != "" {
-		db = db.Where("customer_name = ?", order.CustomerName)
+	if order.CustomerId != 0 {
+		db = db.Where("customer_name = ?", order.CustomerId)
 	}
 	if order.Status > 0 {
 		db = db.Where("status = ?", order.Status)
@@ -244,9 +267,12 @@ func ExportOrder(order *models.Order, begTime, endTime string, pn, pSize int) (*
 	}
 
 	data := make([]models.Order, 0)
-	err := db.Preload("UserList").Find(&data).Error
+	db = db.Preload("UserList")
+	db = db.Preload("Customer")
+	err := db.Find(&data).Error
 	if err != nil {
 		logrus.Infoln("导出订单错误: ", err.Error())
+		return nil, err
 	}
 
 	keyList := []string{
@@ -276,7 +302,7 @@ func ExportOrder(order *models.Order, begTime, endTime string, pn, pSize int) (*
 			"已结金额（元）": v.FinishPrice,
 			"未结金额（元）": v.UnFinishPrice,
 			"订单状态":    getOrderStatus(v.Status),
-			"客户名称":    v.CustomerName,
+			"客户名称":    v.Customer.Name,
 			"订单分配":    getOrderUser(v.UserList),
 			"销售人员":    v.Salesman,
 			"创建时间":    v.CreatedAt,
@@ -297,8 +323,6 @@ func GetOrderFieldList(field string) ([]string, error) {
 		db.Distinct("order_number")
 	case "specification":
 		db.Distinct("specification")
-	case "customerName":
-		db.Distinct("customer_name")
 	case "salesman":
 		db.Distinct("salesman")
 	default:

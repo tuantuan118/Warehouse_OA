@@ -12,7 +12,11 @@ func GetInventoryList(name, supplier, stockUser, begTime, endTime string, pn, pS
 	db := global.Db.Model(&models.IngredientInventory{})
 
 	if name != "" {
-		db = db.Where("name = ?", name)
+		idList, err := GetIngredientsByName(name)
+		if err != nil {
+			return nil, err
+		}
+		db = db.Where("ingredient_id in ?", idList)
 	}
 	if supplier != "" {
 		db = db.Where("supplier = ?", supplier)
@@ -44,20 +48,22 @@ func SaveInventoryByInBound(db *gorm.DB, inBound *models.IngredientInBound) erro
 	data := &models.IngredientInventory{}
 	var total int64
 
-	db = db.Model(&models.IngredientInventory{})
-	db = db.Where("ingredient_id = ?", *inBound.IngredientID)
 	if inBound.StockUnit == 0 {
 		return errors.New("stock unit error")
 	}
 
-	db = db.Where("stock_unit = ?", inBound.StockUnit)
+	ingredientDb := global.Db.Model(&models.IngredientInventory{})
+	ingredientDb = ingredientDb.Where("ingredient_id = ?", *inBound.IngredientID)
+
+	ingredientDb = ingredientDb.Where("stock_unit = ?", inBound.StockUnit)
 	var err error
-	err = db.Count(&total).Error
+	err = ingredientDb.Count(&total).Error
 	if err != nil {
 		return err
 	}
+
 	if total == 0 {
-		_, err = SaveInventory(&models.IngredientInventory{
+		_, err = SaveInventory(db, &models.IngredientInventory{
 			BaseModel: models.BaseModel{
 				Operator: inBound.Operator,
 			},
@@ -70,16 +76,17 @@ func SaveInventoryByInBound(db *gorm.DB, inBound *models.IngredientInBound) erro
 		return err
 	}
 
-	err = db.First(&data).Error
+	err = ingredientDb.First(&data).Error
 	if err != nil {
 		return err
 	}
 
 	data.StockNum += inBound.StockNum
-	return db.Updates(&data).Error
+
+	return db.Select("stock_num").Updates(&data).Error
 }
 
-func SaveInventory(inventory *models.IngredientInventory) (*models.IngredientInventory, error) {
+func SaveInventory(db *gorm.DB, inventory *models.IngredientInventory) (*models.IngredientInventory, error) {
 	ingredients, err := GetIngredientsById(*inventory.IngredientID)
 	if err != nil {
 		return nil, err
@@ -87,7 +94,7 @@ func SaveInventory(inventory *models.IngredientInventory) (*models.IngredientInv
 
 	inventory.Ingredient = ingredients
 
-	err = global.Db.Model(&models.IngredientInventory{}).Create(&inventory).Error
+	err = db.Model(&models.IngredientInventory{}).Create(&inventory).Error
 
 	return inventory, err
 }
@@ -117,7 +124,7 @@ func UpdateInventoryByInBound(db *gorm.DB, oldInBound *models.IngredientInBound)
 	}
 
 	data.StockNum += oldInBound.StockNum
-	return global.Db.Updates(&data).Error
+	return global.Db.Select("stock_num").Updates(&data).Error
 }
 
 func UpdateIngredientStockNum(db *gorm.DB, id int, total int) error {

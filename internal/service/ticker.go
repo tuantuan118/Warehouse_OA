@@ -8,7 +8,7 @@ import (
 )
 
 func Ticker() {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop() // 确保程序退出时停止 ticker
 
 	// 使用循环来处理每次触发的事件

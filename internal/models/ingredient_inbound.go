@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type IngredientInBound struct {
 	BaseModel
 	IngredientID  *int         `gorm:"type:int(11)" json:"ingredientId"`
@@ -10,5 +12,5 @@ type IngredientInBound struct {
 	StockNum      int          `gorm:"type:int(11)" json:"stockNum"`
 	StockUnit     int          `gorm:"type:int(2)" json:"stockUnit"`
 	StockUser     string       `gorm:"type:varchar(256)" json:"stockUser"`
-	StockTime     string       `gorm:"type:varchar(256)" json:"stockTime"`
+	StockTime     time.Time    `gorm:"type:Time" json:"stockTime"`
 }

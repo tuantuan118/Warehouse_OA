@@ -13,7 +13,8 @@ type Order struct {
 	UnFinishPrice float64 `gorm:"type:decimal(10,2)" json:"unFinishPrice"`
 	Status        int     `gorm:"type:int(11);not null" json:"status"`
 	// 1:待出库 2:未完成支付 3:已支付 4:作废
-	CustomerName string `gorm:"type:varchar(256)" json:"customerName"`
-	Salesman     string `gorm:"type:varchar(256)" json:"salesman"`
-	UserList     []User `gorm:"many2many:order_user;" json:"userList"`
+	CustomerId int       `gorm:"type:int(11);not null" json:"customerId"`
+	Customer   *Customer `gorm:"foreignKey:CustomerId" json:"customer"`
+	Salesman   string    `gorm:"type:varchar(256)" json:"salesman"`
+	UserList   []User    `gorm:"many2many:order_user;" json:"userList"`
 }

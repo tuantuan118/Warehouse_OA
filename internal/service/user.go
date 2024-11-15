@@ -198,3 +198,17 @@ func GetRolePermissions(id int) (interface{}, error) {
 
 	return permissions, nil
 }
+
+func getAdmin(userId int) (bool, error) {
+	var total int64
+	err := global.Db.Table("tb_user_role").Where(
+		"role_id = 1 and user_id = ?", userId).Count(&total).Error
+	if err != nil {
+		return false, err
+	}
+	if total > 0 {
+		return true, nil
+	}
+
+	return false, nil
+}
