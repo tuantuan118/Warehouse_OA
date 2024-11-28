@@ -12,7 +12,7 @@ import (
 	"warehouse_oa/utils"
 )
 
-func GetInBoundList(name, supplier, stockUser, begTime, endTime string, pn, pSize int) (interface{}, error) {
+func GetInBoundList(name, supplier, stockUser, stockUnit, begTime, endTime string, pn, pSize int) (interface{}, error) {
 	db := global.Db.Model(&models.IngredientInBound{})
 	totalDb := global.Db.Model(&models.IngredientInBound{})
 
@@ -35,6 +35,10 @@ func GetInBoundList(name, supplier, stockUser, begTime, endTime string, pn, pSiz
 	if stockUser != "" {
 		db = db.Where("stock_user = ?", stockUser)
 		totalDb = totalDb.Where("stock_user = ?", stockUser)
+	}
+	if stockUnit != "" {
+		db = db.Where("stock_unit = ?", stockUnit)
+		totalDb = totalDb.Where("stock_unit = ?", stockUnit)
 	}
 	if begTime != "" && endTime != "" {
 		db = db.Where("DATE_FORMAT(stock_time, '%Y-%m-%d') BETWEEN ? AND ?", begTime, endTime)
@@ -224,8 +228,10 @@ func ExportIngredients(name, supplier, stockUser, begTime, endTime string) (*exc
 	keyList := []string{
 		"配料名称",
 		"配料供应商",
+		"配料规格",
 		"单价（元）",
 		"金额（元）",
+		"采购金额",
 		"入库数量",
 		"入库人员",
 		"入库时间",
@@ -237,8 +243,10 @@ func ExportIngredients(name, supplier, stockUser, begTime, endTime string) (*exc
 		valueList = append(valueList, map[string]interface{}{
 			"配料名称":  v.Ingredient.Name,
 			"配料供应商": v.Ingredient.Supplier,
+			"配料规格":  v.Specification,
 			"单价（元）": v.Price,
 			"金额（元）": v.TotalPrice,
+			"采购金额":  v.Price * float64(v.StockNum),
 			"入库数量":  fmt.Sprintf("%d%s", v.StockNum, returnUnit(v.StockUnit)),
 			"入库人员":  v.StockUser,
 			"入库时间":  v.StockTime,
@@ -274,4 +282,21 @@ func returnUnit(i int) string {
 		return "箱"
 	}
 	return ""
+}
+
+func FinishedSaveInBound(tx *gorm.DB, inBound *models.IngredientInBound) error {
+	ingredients, err := GetIngredientsById(*inBound.IngredientID)
+	if err != nil {
+		return err
+	}
+
+	inBound.Ingredient = ingredients
+
+	err = SaveInventoryByInBound(tx, inBound)
+	if err != nil {
+		return err
+	}
+	err = tx.Model(&models.IngredientInBound{}).Create(inBound).Error
+
+	return nil
 }

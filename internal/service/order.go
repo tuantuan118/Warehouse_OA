@@ -72,7 +72,7 @@ func SaveOrder(order *models.Order) (*models.Order, error) {
 		}
 	}
 
-	produceData, err := GetProduceStockById(order.ProduceId)
+	finishedData, err := GetFinishedStockById(order.FinishedId)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func SaveOrder(order *models.Order) (*models.Order, error) {
 	}
 
 	order.OrderNumber = fmt.Sprintf("QY%s%d", today, total+10001)
-	order.Name = produceData.Name
+	order.Name = finishedData.Name
 	totalPrice := order.Price * float64(order.Amount)
 	order.TotalPrice = totalPrice
 	order.FinishPrice = 0
@@ -233,7 +233,7 @@ func SaveOutBound(id int, username string) error {
 		}
 	}()
 
-	err = UpdateProduceStockNum(tx, data.ProduceId, 0-data.Amount)
+	err = UpdateFinishedStockNum(tx, data.FinishedId, 0-data.Amount)
 	if err != nil {
 		return err
 	}

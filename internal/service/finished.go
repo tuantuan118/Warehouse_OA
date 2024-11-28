@@ -1,0 +1,330 @@
+package service
+
+import (
+	"errors"
+	"fmt"
+	"gorm.io/gorm"
+	"time"
+	"warehouse_oa/internal/global"
+	"warehouse_oa/internal/models"
+)
+
+func GetFinishedList(finished *models.Finished,
+	begReportingTime, endReportingTime string,
+	begFinishTime, endFinishTime string,
+	pn, pSize int) (interface{}, error) {
+	db := global.Db.Model(&models.Finished{})
+
+	if finished.Name != "" {
+		db = db.Where("name = ?", finished.Name)
+	}
+	if finished.Status > 0 {
+		db = db.Where("status = ?", finished.Status)
+	}
+	if begReportingTime != "" && endReportingTime != "" {
+		db = db.Where("DATE_FORMAT(add_time, '%Y-%m-%d') BETWEEN ? AND ?", begReportingTime, endReportingTime)
+	}
+	if begFinishTime != "" && endFinishTime != "" {
+		db = db.Where("DATE_FORMAT(finish_time, '%Y-%m-%d') BETWEEN ? AND ?", begFinishTime, endFinishTime)
+	}
+
+	return Pagination(db, []models.Finished{}, pn, pSize)
+}
+
+func GetFinishedById(id int) (*models.Finished, error) {
+	db := global.Db.Model(&models.Finished{})
+
+	data := &models.Finished{}
+	err := db.Where("id = ?", id).First(&data).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.New("user does not exist")
+	}
+
+	return data, err
+}
+
+func SaveFinished(finished *models.Finished) (*models.Finished, error) {
+	err := IfIngredientsByName(finished.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	finishedManage, err := GetFinishedManageById(finished.FinishedManageId)
+	if err != nil {
+		return nil, err
+	}
+
+	if finished.FinishHour <= 0 {
+		return nil, errors.New("finish hour is invalid")
+	}
+
+	db := global.Db
+	tx := db.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	finished.FinishedManage = finishedManage
+	finished.Name = finishedManage.Name
+	finished.Status = 1
+	finished.FinishTime = time.Now().Add(time.Duration(finished.FinishHour) * time.Hour)
+
+	err = tx.Model(&models.Finished{}).Create(finished).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// 扣除配料库存
+	for _, material := range finishedManage.Material {
+		err = FinishedSaveInBound(tx, &models.IngredientInBound{
+			BaseModel: models.BaseModel{
+				Operator: finished.Operator,
+				Remark:   fmt.Sprintf("成品名：%s 出库", finished.Name),
+			},
+			IngredientID: &material.IngredientID,
+			StockNum:     0 - (material.Quantity * finished.ExpectAmount),
+			StockUnit:    material.IngredientInventory.StockUnit,
+			StockUser:    finished.Operator,
+			StockTime:    time.Now(),
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return finished, err
+}
+
+func UpdateFinished(finished *models.Finished) (*models.Finished, error) {
+	if finished.ID == 0 {
+		return nil, errors.New("id is 0")
+	}
+	oldData, err := GetFinishedById(finished.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	if oldData.Status == 2 || oldData.Status == 3 {
+		return nil, errors.New("finished has been finished, can not update")
+	}
+
+	db := global.Db
+	tx := db.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	finished.ExpectAmount = 0
+	finished.Name = ""
+	finished.FinishedManage = nil
+
+	err = tx.Updates(&finished).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return finished, err
+}
+
+func VoidFinished(id int, username string) error {
+	if id == 0 {
+		return errors.New("id is 0")
+	}
+
+	data, err := GetFinishedById(id)
+	if err != nil {
+		return err
+	}
+	if data == nil {
+		return errors.New("user does not exist")
+	}
+
+	if data.Status == 2 || data.Status == 3 {
+		return errors.New("finished has been finished, can not update")
+	}
+
+	db := global.Db
+	tx := db.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	// 扣除配料库存
+	finishedManage, err := GetFinishedManageById(data.FinishedManageId)
+	if err != nil {
+		return err
+	}
+	for _, material := range finishedManage.Material {
+		err = FinishedSaveInBound(tx, &models.IngredientInBound{
+			BaseModel: models.BaseModel{
+				Operator: username,
+				Remark:   fmt.Sprintf("成品名：%s 作废重新入库", data.Name),
+			},
+			IngredientID: &material.IngredientID,
+			StockNum:     material.Quantity * data.ExpectAmount,
+			StockUnit:    material.IngredientInventory.StockUnit,
+			StockUser:    username,
+			StockTime:    time.Now(),
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	data.Operator = username
+	data.Status = 3
+
+	return tx.Updates(&data).Error
+}
+
+func FinishFinished(id, amount int, username string) error {
+	if id == 0 {
+		return errors.New("id is 0")
+	}
+
+	data, err := GetFinishedById(id)
+	if err != nil {
+		return err
+	}
+	if data == nil {
+		return errors.New("user does not exist")
+	}
+
+	if data.Status == 2 || data.Status == 3 {
+		return errors.New("finished has been finished, can not update")
+	}
+
+	db := global.Db
+	tx := db.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	data.Operator = username
+	data.Status = 3
+	data.ActualAmount = amount
+	data.Ratio = (float64(data.ActualAmount) / float64(data.ExpectAmount)) * float64(100)
+
+	return tx.Updates(&data).Error
+}
+
+func DelFinished(id int, username string) error {
+	if id == 0 {
+		return errors.New("id is 0")
+	}
+
+	data, err := GetFinishedById(id)
+	if err != nil {
+		return err
+	}
+	if data == nil {
+		return errors.New("user does not exist")
+	}
+
+	if data.Status == 2 || data.Status == 3 {
+		return errors.New("finished has been finished, can not update")
+	}
+
+	data.Operator = username
+	data.IsDeleted = true
+	err = global.Db.Updates(&data).Error
+	if err != nil {
+		return err
+	}
+
+	db := global.Db
+	tx := db.Begin()
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	// 扣除配料库存
+	finishedManage, err := GetFinishedManageById(data.FinishedManageId)
+	if err != nil {
+		return err
+	}
+	for _, material := range finishedManage.Material {
+		err = FinishedSaveInBound(tx, &models.IngredientInBound{
+			BaseModel: models.BaseModel{
+				Operator: username,
+				Remark:   fmt.Sprintf("成品名：%s 作废重新入库", data.Name),
+			},
+			IngredientID: &material.IngredientID,
+			StockNum:     material.Quantity * data.ExpectAmount,
+			StockUnit:    material.IngredientInventory.StockUnit,
+			StockUser:    username,
+			StockTime:    time.Now(),
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Delete(&data).Error
+}
+
+// GetFinishedFieldList 获取字段列表
+func GetFinishedFieldList(field string) ([]string, error) {
+	db := global.Db.Model(&models.Finished{})
+	switch field {
+	case "name":
+		db.Select("name")
+	case "orderNumber":
+		db.Select("order_number")
+	default:
+		return nil, errors.New("field not exist")
+	}
+	fields := make([]string, 0)
+	if err := db.Scan(&fields).Error; err != nil {
+		return nil, err
+	}
+
+	return fields, nil
+}
+
+func GetFinishedByStatus(id, status int) (int64, error) {
+	var total int64
+	db := global.Db.Model(&models.Finished{})
+	db = db.Where("finished_manage_id = ?", id)
+	db = db.Where("status = ?", status)
+	err := db.Count(&total).Error
+
+	return total, err
+}
+
+func ProductSaveFinished(tx *gorm.DB, finished *models.Finished) error {
+	manage, err := GetFinishedManageById(finished.FinishedManageId)
+	if err != nil {
+		return err
+	}
+
+	finished.FinishedManage = manage
+
+	err = SaveFinishedStockByInBound(tx, finished)
+	if err != nil {
+		return err
+	}
+	err = tx.Model(&models.Finished{}).Create(finished).Error
+
+	return err
+}

@@ -4,9 +4,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"warehouse_oa/internal/handler/customer"
 	"warehouse_oa/internal/handler/ecomm"
+	"warehouse_oa/internal/handler/finished"
 	"warehouse_oa/internal/handler/ingredients"
 	"warehouse_oa/internal/handler/order"
-	"warehouse_oa/internal/handler/production"
+	"warehouse_oa/internal/handler/product"
 	"warehouse_oa/internal/handler/user"
 	"warehouse_oa/internal/middlewares"
 )
@@ -26,9 +27,10 @@ func InitRouters() *gin.Engine {
 
 		customer.InitCustomerRouter(group)
 		ingredients.InitIngredientRouter(group)
-		production.InitProductionRouter(group)
+		finished.InitProductionRouter(group)
 		order.InitOrderRouter(group)
 		ecomm.InitECommerceRouter(group)
+		product.InitProductRouter(group)
 	}
 
 	user.InitPermissionRouter(group)

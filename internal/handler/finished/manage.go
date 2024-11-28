@@ -1,4 +1,4 @@
-package production
+package finished
 
 import (
 	"github.com/gin-gonic/gin"
@@ -25,9 +25,10 @@ func InitManageRouter(router *gin.RouterGroup) {
 
 func (*Manage) list(c *gin.Context) {
 	pn, pSize := utils.ParsePaginationParams(c)
+	id := c.DefaultQuery("id", "")
 	name := c.DefaultQuery("name", "")
 
-	data, err := service.GetProduceManageList(name, pn, pSize)
+	data, err := service.GetFinishedManageList(id, name, pn, pSize)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return
@@ -39,7 +40,7 @@ func (*Manage) list(c *gin.Context) {
 func (*Manage) getIngredientsByID(c *gin.Context) {
 	id := utils.DefaultQueryInt(c, "id", 0)
 
-	data, err := service.GetProduceManageIngredients(id)
+	data, err := service.GetFinishedManageIngredients(id)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return
@@ -49,7 +50,7 @@ func (*Manage) getIngredientsByID(c *gin.Context) {
 }
 
 func (*Manage) add(c *gin.Context) {
-	ingredients := &models.ProduceManage{}
+	ingredients := &models.FinishedManage{}
 	if err := c.ShouldBindJSON(ingredients); err != nil {
 		// 如果解析失败，返回 400 错误和错误信息
 		handler.BadRequest(c, err.Error())
@@ -57,7 +58,7 @@ func (*Manage) add(c *gin.Context) {
 	}
 
 	ingredients.Operator = c.GetString("userName")
-	data, err := service.SaveProduceManage(ingredients)
+	data, err := service.SaveFinishedManage(ingredients)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return
@@ -67,7 +68,7 @@ func (*Manage) add(c *gin.Context) {
 }
 
 func (*Manage) update(c *gin.Context) {
-	ingredients := &models.ProduceManage{}
+	ingredients := &models.FinishedManage{}
 	if err := c.ShouldBindJSON(ingredients); err != nil {
 		// 如果解析失败，返回 400 错误和错误信息
 		handler.BadRequest(c, err.Error())
@@ -75,7 +76,7 @@ func (*Manage) update(c *gin.Context) {
 	}
 
 	ingredients.Operator = c.GetString("userName")
-	data, err := service.UpdateProduceManage(ingredients)
+	data, err := service.UpdateFinishedManage(ingredients)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return
@@ -85,7 +86,7 @@ func (*Manage) update(c *gin.Context) {
 }
 
 func (*Manage) delete(c *gin.Context) {
-	ingredients := &models.ProduceManage{}
+	ingredients := &models.FinishedManage{}
 	if err := c.ShouldBindJSON(ingredients); err != nil {
 		// 如果解析失败，返回 400 错误和错误信息
 		handler.BadRequest(c, err.Error())
@@ -93,7 +94,7 @@ func (*Manage) delete(c *gin.Context) {
 	}
 
 	ingredients.Operator = c.GetString("userName")
-	err := service.DelProduceManage(ingredients.ID, ingredients.Operator)
+	err := service.DelFinishedManage(ingredients.ID, ingredients.Operator)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return
@@ -104,7 +105,7 @@ func (*Manage) delete(c *gin.Context) {
 
 func (*Manage) fields(c *gin.Context) {
 	field := c.DefaultQuery("field", "")
-	data, err := service.GetProduceManageFieldList(field)
+	data, err := service.GetFinishedManageFieldList(field)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return

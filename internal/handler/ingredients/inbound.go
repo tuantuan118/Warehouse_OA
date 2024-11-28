@@ -28,10 +28,11 @@ func (*InBound) list(c *gin.Context) {
 	name := c.DefaultQuery("name", "")
 	supplier := c.DefaultQuery("supplier", "")
 	stockUser := c.DefaultQuery("stockUser", "")
+	stockUnit := c.DefaultQuery("stockUnit", "")
 	begTime := c.DefaultQuery("begTime", "")
 	endTime := c.DefaultQuery("endTime", "")
 
-	data, err := service.GetInBoundList(name, supplier, stockUser, begTime, endTime, pn, pSize)
+	data, err := service.GetInBoundList(name, supplier, stockUser, stockUnit, begTime, endTime, pn, pSize)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return

@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"gorm.io/gorm"
+	"strings"
 	"warehouse_oa/internal/global"
 	"warehouse_oa/internal/models"
 )
@@ -11,10 +12,12 @@ func GetIngredientsList(ingredients *models.Ingredients, pn, pSize int) (interfa
 	db := global.Db.Model(&models.Ingredients{})
 
 	if ingredients.Name != "" {
-		db = db.Where("name = ?", ingredients.Name)
+		slice := strings.Split(ingredients.Name, ";")
+		db = db.Where("name in ?", slice)
 	}
 	if ingredients.Supplier != "" {
-		db = db.Where("supplier = ?", ingredients.Supplier)
+		slice := strings.Split(ingredients.Supplier, ";")
+		db = db.Where("supplier in ?", slice)
 	}
 
 	return Pagination(db, []models.Ingredients{}, pn, pSize)

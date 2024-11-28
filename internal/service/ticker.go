@@ -14,24 +14,24 @@ func Ticker() {
 	// 使用循环来处理每次触发的事件
 	for range ticker.C {
 		// 执行任务
-		produce := make([]models.Produce, 0)
+		finished := make([]models.Finished, 0)
 
-		db := global.Db.Model(&models.Produce{})
+		db := global.Db.Model(&models.Finished{})
 		db = db.Where("finish_time <= ?", time.Now())
 		db = db.Where("status = ?", 1)
-		err := db.Find(&produce).Error
+		err := db.Find(&finished).Error
 		if err != nil {
 			logrus.Infoln("定时任务查找产品库存错误: ", err.Error())
 		}
 
-		for _, v := range produce {
-			v.Status = 2
-			err = SaveProduceStockByInBound(&v)
-			if err != nil {
-				logrus.Infoln("定时任务新增产品库存错误: ", err.Error())
-			}
+		for _, v := range finished {
+			v.Status = 4
+			//err = SaveFinishedStockByInBound(&v)
+			//if err != nil {
+			//	logrus.Infoln("定时任务新增产品库存错误: ", err.Error())
+			//}
 
-			_, err = UpdateProduce(&v)
+			_, err = UpdateFinished(&v)
 			if err != nil {
 				logrus.Infoln("定时任务修改产品库存错误: ", err.Error())
 			}
