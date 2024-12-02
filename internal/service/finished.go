@@ -35,17 +35,21 @@ func GetFinishedList(finished *models.Finished,
 
 func GetOutFinishedList(finished *models.Finished,
 	begTime, endTime string,
-	pn, pSize int, b bool) (interface{}, error) {
+	pn, pSize int) (interface{}, error) {
 
-	stock, err := GetFinishedStockById(finished.ID)
-	if err != nil {
-		return nil, err
+	var finishedManageId int
+	if finished.ID != 0 {
+		stock, err := GetFinishedStockById(finished.ID)
+		if err != nil {
+			return nil, err
+		}
+		finishedManageId = stock.FinishedManageId
 	}
 
 	return GetFinishedList(&models.Finished{
 		Name:             finished.Name,
 		Status:           finished.Status,
-		FinishedManageId: stock.FinishedManageId,
+		FinishedManageId: finishedManageId,
 	}, begTime, endTime, pn, pSize, false)
 }
 
@@ -109,14 +113,14 @@ func SaveFinished(finished *models.Finished) (*models.Finished, error) {
 		err = FinishedSaveInBound(tx, &models.IngredientInBound{
 			BaseModel: models.BaseModel{
 				Operator: finished.Operator,
-				Remark:   fmt.Sprintf("成品名：%s 出库", finished.Name),
 			},
-			IngredientID:  &material.IngredientID,
-			StockNum:      0 - (material.Quantity * finished.ExpectAmount),
-			StockUnit:     material.IngredientInventory.StockUnit,
-			StockUser:     finished.Operator,
-			StockTime:     time.Now(),
-			OperationType: "出库",
+			IngredientID:     material.IngredientInventory.IngredientID,
+			StockNum:         0 - (material.Quantity * finished.ExpectAmount),
+			StockUnit:        material.IngredientInventory.StockUnit,
+			StockUser:        finished.Operator,
+			StockTime:        time.Now(),
+			OperationType:    "出库",
+			OperationDetails: fmt.Sprintf("报工生产【%s成品】消耗", finished.Name),
 		})
 		if err != nil {
 			return nil, err
@@ -197,14 +201,14 @@ func VoidFinished(id int, username string) error {
 		err = FinishedSaveInBound(tx, &models.IngredientInBound{
 			BaseModel: models.BaseModel{
 				Operator: username,
-				Remark:   fmt.Sprintf("成品名：%s 作废重新入库", data.Name),
 			},
-			IngredientID:  &material.IngredientID,
-			StockNum:      material.Quantity * data.ExpectAmount,
-			StockUnit:     material.IngredientInventory.StockUnit,
-			StockUser:     username,
-			StockTime:     time.Now(),
-			OperationType: "入库",
+			IngredientID:     material.IngredientInventory.IngredientID,
+			StockNum:         material.Quantity * data.ExpectAmount,
+			StockUnit:        material.IngredientInventory.StockUnit,
+			StockUser:        username,
+			StockTime:        time.Now(),
+			OperationType:    "入库",
+			OperationDetails: fmt.Sprintf("报工生产【%s成品】作废重新入库", data.Name),
 		})
 		if err != nil {
 			return err
@@ -250,6 +254,7 @@ func FinishFinished(id, amount int, username string) error {
 	data.Ratio = (float64(data.ActualAmount) / float64(data.ExpectAmount)) * float64(100)
 	ft := time.Now()
 	data.FinishTime = &ft
+	data.OperationDetails = fmt.Sprintf("生产完工")
 
 	err = SaveFinishedStockByInBound(tx, data)
 	if err != nil {
@@ -302,14 +307,14 @@ func DelFinished(id int, username string) error {
 		err = FinishedSaveInBound(tx, &models.IngredientInBound{
 			BaseModel: models.BaseModel{
 				Operator: username,
-				Remark:   fmt.Sprintf("成品名：%s 作废重新入库", data.Name),
 			},
-			IngredientID:  &material.IngredientID,
-			StockNum:      material.Quantity * data.ExpectAmount,
-			StockUnit:     material.IngredientInventory.StockUnit,
-			StockUser:     username,
-			StockTime:     time.Now(),
-			OperationType: "入库",
+			IngredientID:     material.IngredientInventory.IngredientID,
+			StockNum:         material.Quantity * data.ExpectAmount,
+			StockUnit:        material.IngredientInventory.StockUnit,
+			StockUser:        username,
+			StockTime:        time.Now(),
+			OperationType:    "入库",
+			OperationDetails: fmt.Sprintf("报工生产【%s成品】删除重新入库", data.Name),
 		})
 		if err != nil {
 			return err

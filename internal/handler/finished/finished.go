@@ -158,9 +158,9 @@ func (*Finished) outList(c *gin.Context) {
 	begTime := c.DefaultQuery("begTime", "")
 	endTime := c.DefaultQuery("endTime", "")
 
-	data, err := service.GetFinishedList(finished,
+	data, err := service.GetOutFinishedList(finished,
 		begTime, endTime,
-		pn, pSize, false)
+		pn, pSize)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return

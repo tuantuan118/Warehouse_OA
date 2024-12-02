@@ -16,4 +16,5 @@ type Finished struct {
 	FinishedManage   *FinishedManage `gorm:"foreignKey:FinishedManageId;" json:"finishedManage"`
 	InAndOut         bool            `gorm:"type:tinyint(1)" json:"inAndOut"` // InAndOut True 入库 False 出库
 	OperationType    string          `gorm:"type:varchar(256)" json:"operationType"`
+	OperationDetails string          `gorm:"type:varchar(256)" json:"operationDetails"`
 }

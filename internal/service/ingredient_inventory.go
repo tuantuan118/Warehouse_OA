@@ -83,6 +83,10 @@ func SaveInventoryByInBound(db *gorm.DB, inBound *models.IngredientInBound) erro
 
 	data.StockNum += inBound.StockNum
 
+	if data.StockNum < 0 {
+		return errors.New("insufficient inventory")
+	}
+
 	return db.Select("stock_num").Updates(&data).Error
 }
 
@@ -93,6 +97,10 @@ func SaveInventory(db *gorm.DB, inventory *models.IngredientInventory) (*models.
 	}
 
 	inventory.Ingredient = ingredients
+
+	if inventory.StockNum < 0 {
+		return nil, errors.New("insufficient inventory")
+	}
 
 	err = db.Model(&models.IngredientInventory{}).Create(&inventory).Error
 

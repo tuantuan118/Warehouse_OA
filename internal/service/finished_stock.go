@@ -57,15 +57,24 @@ func SaveFinishedStockByInBound(tx *gorm.DB, finished *models.Finished) error {
 
 	data := &models.FinishedStock{}
 	err = db.First(&data).Error
+
 	if err != nil {
 		return err
 	}
 	data.Amount += float64(finished.ActualAmount)
 
+	if data.Amount < 0 {
+		return errors.New("insufficient inventory")
+	}
+
 	return tx.Updates(&data).Error
 }
 
 func SaveFinishedStock(finished *models.FinishedStock) (*models.FinishedStock, error) {
+	if finished.Amount < 0 {
+		return nil, errors.New("insufficient inventory")
+	}
+	
 	err := global.Db.Model(&models.FinishedStock{}).Create(&finished).Error
 
 	return finished, err

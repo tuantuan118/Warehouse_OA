@@ -91,6 +91,7 @@ func SaveInBound(inBound *models.IngredientInBound) (*models.IngredientInBound, 
 	inBound.Ingredient = ingredients
 	inBound.InAndOut = true
 	inBound.OperationType = "入库"
+	inBound.OperationDetails = fmt.Sprintf("配料入库")
 
 	db := global.Db
 	tx := db.Begin()

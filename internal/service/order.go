@@ -229,6 +229,8 @@ func FinishOrder(order *models.Order) (*models.Order, error) {
 
 	if oldData.TotalPrice <= order.FinishPrice {
 		order.Status = 3
+	} else {
+		order.Status = 2
 	}
 
 	return order, global.Db.Select("UnFinishPrice",
@@ -307,7 +309,6 @@ func SaveOutBound(id int, username string) error {
 	err = ProductSaveFinished(tx, &models.Finished{
 		BaseModel: models.BaseModel{
 			Operator: username,
-			Remark:   fmt.Sprintf("出售%s产品", product.Name),
 		},
 		Name:             product.Name,
 		ActualAmount:     0 - product.Amount*data.Amount,
@@ -316,6 +317,7 @@ func SaveOutBound(id int, username string) error {
 		FinishedManageId: product.FinishedManageId,
 		FinishedManage:   manageId,
 		OperationType:    "出库",
+		OperationDetails: fmt.Sprintf("【%s产品】销售出库", product.Name),
 	})
 	if err != nil {
 		return err
@@ -415,7 +417,7 @@ func ExportOrder(order *models.Order) ([]byte, error) {
 	}
 
 	cmd := exec.Command("libreoffice",
-		"--headless",
+		"--invisible",
 		"--convert-to",
 		"pdf",
 		"--outdir",
