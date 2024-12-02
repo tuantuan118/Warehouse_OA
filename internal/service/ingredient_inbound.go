@@ -12,7 +12,8 @@ import (
 	"warehouse_oa/utils"
 )
 
-func GetInBoundList(name, supplier, stockUser, stockUnit, begTime, endTime string, pn, pSize int) (interface{}, error) {
+func GetInBoundList(name, supplier, stockUser, stockUnit, begTime, endTime string,
+	pn, pSize int, b bool) (interface{}, error) {
 	db := global.Db.Model(&models.IngredientInBound{})
 	totalDb := global.Db.Model(&models.IngredientInBound{})
 
@@ -51,6 +52,9 @@ func GetInBoundList(name, supplier, stockUser, stockUnit, begTime, endTime strin
 		return nil, err
 	}
 
+	if b {
+		db = db.Where("in_and_out = ?", b)
+	}
 	db = db.Preload("Ingredient")
 	m, err := Pagination(db, []models.IngredientInBound{}, pn, pSize)
 	if err != nil {
@@ -85,6 +89,8 @@ func SaveInBound(inBound *models.IngredientInBound) (*models.IngredientInBound, 
 	floatResult := new(big.Float).Mul(price, stockNum)
 	inBound.TotalPrice, _ = floatResult.Float64()
 	inBound.Ingredient = ingredients
+	inBound.InAndOut = true
+	inBound.OperationType = "入库"
 
 	db := global.Db
 	tx := db.Begin()
@@ -299,4 +305,23 @@ func FinishedSaveInBound(tx *gorm.DB, inBound *models.IngredientInBound) error {
 	err = tx.Model(&models.IngredientInBound{}).Create(inBound).Error
 
 	return nil
+}
+
+func GetOutInBoundList(id int, supplier, stockUser, begTime, endTime string,
+	pn, pSize int) (interface{}, error) {
+	inventory, err := GetInventoryById(id)
+	if err != nil {
+		return nil, err
+	}
+	return GetInBoundList(
+		inventory.Ingredient.Name,
+		supplier,
+		stockUser,
+		fmt.Sprintf("%d", inventory.StockUnit),
+		begTime,
+		endTime,
+		pn,
+		pSize,
+		false,
+	)
 }

@@ -20,6 +20,7 @@ func GetProductList(product *models.Product, pn, pSize int) (interface{}, error)
 	if product.OrderNumber != "" {
 		db = db.Where("name LIKE %?%", product.OrderNumber)
 	}
+	db = db.Preload("FinishedManage")
 
 	return Pagination(db, []models.Product{}, pn, pSize)
 }
@@ -47,31 +48,6 @@ func SaveProduct(product *models.Product) (*models.Product, error) {
 		return nil, err
 	}
 
-	db := global.Db
-	tx := db.Begin()
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		} else {
-			tx.Commit()
-		}
-	}()
-	err = ProductSaveFinished(tx, &models.Finished{
-		BaseModel: models.BaseModel{
-			Operator: product.Operator,
-			Remark:   fmt.Sprintf("出售%s产品", product.Name),
-		},
-		Name:             product.Name,
-		ActualAmount:     0 - product.Amount,
-		Status:           2,
-		FinishTime:       time.Now(),
-		FinishedManageId: product.FinishedManageId,
-		FinishedManage:   finishedManage,
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	today := time.Now().Format("20060102")
 	total, err := getTodayProductCount()
 	if err != nil {
@@ -80,7 +56,7 @@ func SaveProduct(product *models.Product) (*models.Product, error) {
 
 	product.OrderNumber = fmt.Sprintf("QY%s%d", today, total+10001)
 	product.FinishedManage = finishedManage
-	err = tx.Model(&models.Product{}).Create(product).Error
+	err = global.Db.Model(&models.Product{}).Create(product).Error
 
 	return product, err
 }
@@ -118,36 +94,6 @@ func DelProduct(id int, username string) error {
 	}
 	if data == nil {
 		return errors.New("user does not exist")
-	}
-
-	finishedManage, err := GetFinishedManageById(data.FinishedManageId)
-	if err != nil {
-		return err
-	}
-
-	db := global.Db
-	tx := db.Begin()
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		} else {
-			tx.Commit()
-		}
-	}()
-	err = ProductSaveFinished(tx, &models.Finished{
-		BaseModel: models.BaseModel{
-			Operator: username,
-			Remark:   fmt.Sprintf("退回%s产品", data.Name),
-		},
-		Name:             data.Name,
-		ActualAmount:     data.Amount,
-		Status:           2,
-		FinishTime:       time.Now(),
-		FinishedManageId: data.FinishedManageId,
-		FinishedManage:   finishedManage,
-	})
-	if err != nil {
-		return err
 	}
 
 	data.Operator = username

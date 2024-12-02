@@ -70,22 +70,6 @@ func SaveFinishedStock(finished *models.FinishedStock) (*models.FinishedStock, e
 
 	return finished, err
 }
-func UpdateFinishedStockNum(db *gorm.DB, id int, total int) error {
-	if id == 0 {
-		return errors.New("id is 0")
-	}
-	finished, err := GetFinishedStockById(id)
-	if err != nil {
-		return err
-	}
-	if finished.Amount+float64(total) < 0 {
-		return errors.New("stock not enough")
-	}
-
-	finished.Amount += float64(total)
-
-	return db.Updates(&finished).Error
-}
 
 // GetFinishedStockFieldList 获取字段列表
 func GetFinishedStockFieldList(field string) ([]string, error) {

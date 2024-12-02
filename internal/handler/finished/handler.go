@@ -2,10 +2,10 @@ package finished
 
 import "github.com/gin-gonic/gin"
 
-func InitProductionRouter(router *gin.RouterGroup) {
-	productionRouter := router.Group("finished")
+func InitFinishedAllRouter(router *gin.RouterGroup) {
+	finishedRouter := router.Group("finished")
 
-	InitFinishedRouter(productionRouter)
-	InitManageRouter(productionRouter)
-	InitFinishedStockRouter(productionRouter)
+	InitFinishedRouter(finishedRouter)
+	InitManageRouter(finishedRouter)
+	InitFinishedStockRouter(finishedRouter)
 }

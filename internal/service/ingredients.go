@@ -38,8 +38,9 @@ func GetIngredientsById(id int) (*models.Ingredients, error) {
 func GetIngredientsByName(name string) ([]int, error) {
 	db := global.Db.Model(&models.Ingredients{})
 
+	slice := strings.Split(name, ";")
 	idList := make([]int, 0)
-	err := db.Select("id").Where("name = ?", name).First(&idList).Error
+	err := db.Select("id").Where("name = ?", slice).First(&idList).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.New("user does not exist")
 	}

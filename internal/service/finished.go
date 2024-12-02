@@ -10,25 +10,43 @@ import (
 )
 
 func GetFinishedList(finished *models.Finished,
-	begReportingTime, endReportingTime string,
-	begFinishTime, endFinishTime string,
-	pn, pSize int) (interface{}, error) {
+	begTime, endTime string,
+	pn, pSize int, b bool) (interface{}, error) {
 	db := global.Db.Model(&models.Finished{})
 
+	if finished.FinishedManageId > 0 {
+		db = db.Where("finished_manage_id = ?", finished.FinishedManageId)
+	}
 	if finished.Name != "" {
 		db = db.Where("name = ?", finished.Name)
 	}
 	if finished.Status > 0 {
 		db = db.Where("status = ?", finished.Status)
 	}
-	if begReportingTime != "" && endReportingTime != "" {
-		db = db.Where("DATE_FORMAT(add_time, '%Y-%m-%d') BETWEEN ? AND ?", begReportingTime, endReportingTime)
+	if begTime != "" && endTime != "" {
+		db = db.Where("DATE_FORMAT(finish_time, '%Y-%m-%d') BETWEEN ? AND ?", begTime, endTime)
 	}
-	if begFinishTime != "" && endFinishTime != "" {
-		db = db.Where("DATE_FORMAT(finish_time, '%Y-%m-%d') BETWEEN ? AND ?", begFinishTime, endFinishTime)
+	if b {
+		db = db.Where("in_and_out = ?", b)
 	}
 
 	return Pagination(db, []models.Finished{}, pn, pSize)
+}
+
+func GetOutFinishedList(finished *models.Finished,
+	begTime, endTime string,
+	pn, pSize int, b bool) (interface{}, error) {
+
+	stock, err := GetFinishedStockById(finished.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return GetFinishedList(&models.Finished{
+		Name:             finished.Name,
+		Status:           finished.Status,
+		FinishedManageId: stock.FinishedManageId,
+	}, begTime, endTime, pn, pSize, false)
 }
 
 func GetFinishedById(id int) (*models.Finished, error) {
@@ -54,10 +72,6 @@ func SaveFinished(finished *models.Finished) (*models.Finished, error) {
 		return nil, err
 	}
 
-	if finished.FinishHour <= 0 {
-		return nil, errors.New("finish hour is invalid")
-	}
-
 	db := global.Db
 	tx := db.Begin()
 	defer func() {
@@ -71,7 +85,19 @@ func SaveFinished(finished *models.Finished) (*models.Finished, error) {
 	finished.FinishedManage = finishedManage
 	finished.Name = finishedManage.Name
 	finished.Status = 1
-	finished.FinishTime = time.Now().Add(time.Duration(finished.FinishHour) * time.Hour)
+	finished.FinishTime = nil
+	finished.InAndOut = true
+	finished.OperationType = "入库"
+
+	if finished.FinishHour > 0 {
+		et := time.Now().Add(time.Duration(finished.FinishHour) * time.Hour)
+		finished.EstimatedTime = &et
+
+	} else {
+		finished.Status = 4
+		et := time.Now()
+		finished.EstimatedTime = &et
+	}
 
 	err = tx.Model(&models.Finished{}).Create(finished).Error
 	if err != nil {
@@ -85,11 +111,12 @@ func SaveFinished(finished *models.Finished) (*models.Finished, error) {
 				Operator: finished.Operator,
 				Remark:   fmt.Sprintf("成品名：%s 出库", finished.Name),
 			},
-			IngredientID: &material.IngredientID,
-			StockNum:     0 - (material.Quantity * finished.ExpectAmount),
-			StockUnit:    material.IngredientInventory.StockUnit,
-			StockUser:    finished.Operator,
-			StockTime:    time.Now(),
+			IngredientID:  &material.IngredientID,
+			StockNum:      0 - (material.Quantity * finished.ExpectAmount),
+			StockUnit:     material.IngredientInventory.StockUnit,
+			StockUser:     finished.Operator,
+			StockTime:     time.Now(),
+			OperationType: "出库",
 		})
 		if err != nil {
 			return nil, err
@@ -172,11 +199,12 @@ func VoidFinished(id int, username string) error {
 				Operator: username,
 				Remark:   fmt.Sprintf("成品名：%s 作废重新入库", data.Name),
 			},
-			IngredientID: &material.IngredientID,
-			StockNum:     material.Quantity * data.ExpectAmount,
-			StockUnit:    material.IngredientInventory.StockUnit,
-			StockUser:    username,
-			StockTime:    time.Now(),
+			IngredientID:  &material.IngredientID,
+			StockNum:      material.Quantity * data.ExpectAmount,
+			StockUnit:     material.IngredientInventory.StockUnit,
+			StockUser:     username,
+			StockTime:     time.Now(),
+			OperationType: "入库",
 		})
 		if err != nil {
 			return err
@@ -217,9 +245,16 @@ func FinishFinished(id, amount int, username string) error {
 	}()
 
 	data.Operator = username
-	data.Status = 3
+	data.Status = 2
 	data.ActualAmount = amount
 	data.Ratio = (float64(data.ActualAmount) / float64(data.ExpectAmount)) * float64(100)
+	ft := time.Now()
+	data.FinishTime = &ft
+
+	err = SaveFinishedStockByInBound(tx, data)
+	if err != nil {
+		return err
+	}
 
 	return tx.Updates(&data).Error
 }
@@ -269,11 +304,12 @@ func DelFinished(id int, username string) error {
 				Operator: username,
 				Remark:   fmt.Sprintf("成品名：%s 作废重新入库", data.Name),
 			},
-			IngredientID: &material.IngredientID,
-			StockNum:     material.Quantity * data.ExpectAmount,
-			StockUnit:    material.IngredientInventory.StockUnit,
-			StockUser:    username,
-			StockTime:    time.Now(),
+			IngredientID:  &material.IngredientID,
+			StockNum:      material.Quantity * data.ExpectAmount,
+			StockUnit:     material.IngredientInventory.StockUnit,
+			StockUser:     username,
+			StockTime:     time.Now(),
+			OperationType: "入库",
 		})
 		if err != nil {
 			return err

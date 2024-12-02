@@ -10,7 +10,10 @@ type Finished struct {
 	ActualAmount     int             `gorm:"type:int(11);not null" json:"actualAmount"`
 	Status           int             `gorm:"type:int(11);not null" json:"status"`
 	FinishHour       int             `gorm:"-" json:"finishHour"`
-	FinishTime       time.Time       `gorm:"type:Time" json:"finishTime"`
+	EstimatedTime    *time.Time      `gorm:"type:Time" json:"estimatedTime"`
+	FinishTime       *time.Time      `gorm:"type:Time" json:"finishTime"`
 	FinishedManageId int             `gorm:"type:int(11)" json:"finishedManageId"`
 	FinishedManage   *FinishedManage `gorm:"foreignKey:FinishedManageId;" json:"finishedManage"`
+	InAndOut         bool            `gorm:"type:tinyint(1)" json:"inAndOut"` // InAndOut True 入库 False 出库
+	OperationType    string          `gorm:"type:varchar(256)" json:"operationType"`
 }

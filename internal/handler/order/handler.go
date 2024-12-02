@@ -2,7 +2,6 @@ package order
 
 import (
 	"github.com/gin-gonic/gin"
-	"net/http"
 	"warehouse_oa/internal/handler"
 	"warehouse_oa/internal/models"
 	"warehouse_oa/internal/service"
@@ -166,24 +165,17 @@ func (*Order) export(c *gin.Context) {
 		Specification: c.DefaultQuery("specification", ""),
 		CustomerId:    utils.DefaultQueryInt(c, "customerId", 0),
 	}
-	begTime := c.DefaultQuery("begTime", "")
-	endTime := c.DefaultQuery("endTime", "")
 
-	data, err := service.ExportOrder(order, begTime, endTime)
+	data, err := service.ExportOrder(order)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return
 	}
 
-	c.Header("Content-Type", "application/octet-stream")
-	c.Header("Content-Disposition", `attachment; filename="销售开单.xlsx"`)
-	c.Header("Content-Transfer-Encoding", "binary")
+	c.Header("Content-Type", "application/pdf")
+	c.Header("Content-Disposition", "attachment; filename=file.pdf")
 
-	// 将 Excel 文件写入到 HTTP 响应中
-	if err = data.Write(c.Writer); err != nil {
-		c.String(http.StatusInternalServerError, "文件生成失败")
-		return
-	}
+	c.Data(200, "application/pdf", data)
 }
 
 func (*Order) fields(c *gin.Context) {

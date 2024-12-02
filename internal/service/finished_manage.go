@@ -28,7 +28,7 @@ func GetFinishedManageIngredients(id int) ([]map[string]interface{}, error) {
 		return nil, errors.New("id is 0")
 	}
 	db := global.Db
-	productIngredient := make([]models.ProductMaterial, 0)
+	productIngredient := make([]models.FinishedMaterial, 0)
 
 	err := db.Where("finished_manage_id = ?", id).Preload(
 		"IngredientInventory.Ingredient").Find(&productIngredient).Error
@@ -57,7 +57,8 @@ func GetFinishedManageById(id int) (*models.FinishedManage, error) {
 	db := global.Db.Model(&models.FinishedManage{})
 
 	data := &models.FinishedManage{}
-	err := db.Where("id = ?", id).Preload("Material").First(&data).Error
+	err := db.Where("id = ?", id).Preload(
+		"Material.IngredientInventory").First(&data).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.New("user does not exist")
 	}
@@ -184,7 +185,7 @@ func GetFinishedManageFieldList(field string) ([]string, error) {
 }
 
 func RemoveIngredients(manageId int) error {
-	return global.Db.Model(&models.ProductMaterial{}).Where(
-		"finished_manage_id = ?", manageId).Delete(&models.ProductMaterial{}).Error
+	return global.Db.Model(&models.FinishedMaterial{}).Where(
+		"finished_manage_id = ?", manageId).Delete(&models.FinishedMaterial{}).Error
 
 }

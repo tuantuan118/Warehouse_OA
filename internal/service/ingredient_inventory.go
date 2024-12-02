@@ -36,7 +36,7 @@ func GetInventoryById(id int) (*models.IngredientInventory, error) {
 	db := global.Db.Model(&models.IngredientInventory{})
 
 	data := &models.IngredientInventory{}
-	err := db.Where("id = ?", id).First(&data).Error
+	err := db.Preload("Ingredient").Where("id = ?", id).First(&data).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.New("user does not exist")
 	}

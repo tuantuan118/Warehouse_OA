@@ -62,6 +62,15 @@ func InternalServerError(c *gin.Context, err error) {
 	})
 }
 
+// InternalServerErrorData 通用的服务器内部错误响应
+func InternalServerErrorData(c *gin.Context, err error, data interface{}) {
+	c.JSON(http.StatusInternalServerError, Response{
+		Code:    ErrorCode,
+		Message: err.Error(),
+		Data:    data,
+	})
+}
+
 // BadRequest 参数错误响应
 func BadRequest(c *gin.Context, message string) {
 	c.JSON(http.StatusBadRequest, Response{

@@ -7,6 +7,4 @@ type Product struct {
 	FinishedManageId int             `gorm:"type:int(11)" json:"finishedManageId"`
 	FinishedManage   *FinishedManage `gorm:"foreignKey:FinishedManageId;" json:"finishedManage"`
 	Amount           int             `gorm:"type:int(11)" json:"amount"`
-	Unit             int             `gorm:"type:int(2)" json:"unit"`
-	Weight           int             `gorm:"type:int(11)" json:"weight"`
 }

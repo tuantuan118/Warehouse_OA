@@ -17,6 +17,7 @@ func InitInBoundRouter(router *gin.RouterGroup) {
 	inBoundRouter := router.Group("in_bound")
 
 	inBoundRouter.GET("list", ib.list)
+	inBoundRouter.GET("outList", ib.outList)
 	inBoundRouter.GET("export", ib.export)
 	inBoundRouter.POST("add", ib.add)
 	inBoundRouter.POST("update", ib.update)
@@ -32,7 +33,8 @@ func (*InBound) list(c *gin.Context) {
 	begTime := c.DefaultQuery("begTime", "")
 	endTime := c.DefaultQuery("endTime", "")
 
-	data, err := service.GetInBoundList(name, supplier, stockUser, stockUnit, begTime, endTime, pn, pSize)
+	data, err := service.GetInBoundList(name, supplier, stockUser, stockUnit,
+		begTime, endTime, pn, pSize, true)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return
@@ -117,4 +119,21 @@ func (*InBound) export(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "文件生成失败")
 		return
 	}
+}
+
+func (*InBound) outList(c *gin.Context) {
+	pn, pSize := utils.ParsePaginationParams(c)
+	id := utils.DefaultQueryInt(c, "id", 0)
+	supplier := c.DefaultQuery("supplier", "")
+	stockUser := c.DefaultQuery("stockUser", "")
+	begTime := c.DefaultQuery("begTime", "")
+	endTime := c.DefaultQuery("endTime", "")
+
+	data, err := service.GetOutInBoundList(id, supplier, stockUser, begTime, endTime, pn, pSize)
+	if err != nil {
+		handler.InternalServerError(c, err)
+		return
+	}
+
+	handler.Success(c, data)
 }

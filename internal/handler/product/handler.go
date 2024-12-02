@@ -10,16 +10,16 @@ import (
 
 type Product struct{}
 
-var c Product
+var p Product
 
 func InitProductRouter(router *gin.RouterGroup) {
 	productRouter := router.Group("product")
 
-	productRouter.GET("list", c.list)
-	productRouter.GET("fields", c.fields)
-	productRouter.POST("add", c.add)
-	productRouter.POST("update", c.update)
-	productRouter.POST("delete", c.delete)
+	productRouter.GET("list", p.list)
+	productRouter.GET("fields", p.fields)
+	productRouter.POST("add", p.add)
+	productRouter.POST("update", p.update)
+	productRouter.POST("delete", p.delete)
 }
 
 func (*Product) list(c *gin.Context) {

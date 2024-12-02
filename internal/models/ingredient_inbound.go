@@ -13,4 +13,6 @@ type IngredientInBound struct {
 	StockUnit     int          `gorm:"type:int(2)" json:"stockUnit"`
 	StockUser     string       `gorm:"type:varchar(256)" json:"stockUser"`
 	StockTime     time.Time    `gorm:"type:Time" json:"stockTime"`
+	InAndOut      bool         `gorm:"type:tinyint(1)" json:"inAndOut"` // InAndOut True 入库 False 出库
+	OperationType string       `gorm:"type:varchar(256)" json:"operationType"`
 }

@@ -16,6 +16,7 @@ func InitFinishedRouter(router *gin.RouterGroup) {
 	finishedRouter := router.Group("finished")
 
 	finishedRouter.GET("list", p.list)
+	finishedRouter.GET("outList", p.outList)
 	finishedRouter.GET("fields", p.fields)
 	finishedRouter.POST("add", p.add)
 	finishedRouter.POST("update", p.update)
@@ -30,15 +31,12 @@ func (*Finished) list(c *gin.Context) {
 		Name:   c.DefaultQuery("name", ""),
 		Status: utils.DefaultQueryInt(c, "status", -1),
 	}
-	begReportingTime := c.DefaultQuery("begReportingTime", "")
-	endReportingTime := c.DefaultQuery("endReportingTime", "")
-	begFinishTime := c.DefaultQuery("begFinishTime", "")
-	endFinishTime := c.DefaultQuery("endFinishTime", "")
+	begTime := c.DefaultQuery("begTime", "")
+	endTime := c.DefaultQuery("endTime", "")
 
 	data, err := service.GetFinishedList(finished,
-		begReportingTime, endReportingTime,
-		begFinishTime, endFinishTime,
-		pn, pSize)
+		begTime, endTime,
+		pn, pSize, true)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return
@@ -140,6 +138,29 @@ func (*Finished) finish(c *gin.Context) {
 func (*Finished) fields(c *gin.Context) {
 	field := c.DefaultQuery("field", "")
 	data, err := service.GetFinishedFieldList(field)
+	if err != nil {
+		handler.InternalServerError(c, err)
+		return
+	}
+
+	handler.Success(c, data)
+}
+
+func (*Finished) outList(c *gin.Context) {
+	pn, pSize := utils.ParsePaginationParams(c)
+	finished := &models.Finished{
+		BaseModel: models.BaseModel{
+			ID: utils.DefaultQueryInt(c, "id", 0),
+		},
+		Name:   c.DefaultQuery("name", ""),
+		Status: utils.DefaultQueryInt(c, "status", -1),
+	}
+	begTime := c.DefaultQuery("begTime", "")
+	endTime := c.DefaultQuery("endTime", "")
+
+	data, err := service.GetFinishedList(finished,
+		begTime, endTime,
+		pn, pSize, false)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return

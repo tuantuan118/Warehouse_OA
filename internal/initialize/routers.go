@@ -5,6 +5,7 @@ import (
 	"warehouse_oa/internal/handler/customer"
 	"warehouse_oa/internal/handler/ecomm"
 	"warehouse_oa/internal/handler/finished"
+	"warehouse_oa/internal/handler/gallery"
 	"warehouse_oa/internal/handler/ingredients"
 	"warehouse_oa/internal/handler/order"
 	"warehouse_oa/internal/handler/product"
@@ -14,6 +15,7 @@ import (
 
 func InitRouters() *gin.Engine {
 	Router := gin.Default()
+	Router.Static("/images", "./cos/images")
 	Router.Use(middlewares.Cors())
 
 	apiGroup := Router.Group("/api/v1")
@@ -27,7 +29,8 @@ func InitRouters() *gin.Engine {
 
 		customer.InitCustomerRouter(group)
 		ingredients.InitIngredientRouter(group)
-		finished.InitProductionRouter(group)
+		finished.InitFinishedAllRouter(group)
+		gallery.InitGalleryRouter(group)
 		order.InitOrderRouter(group)
 		ecomm.InitECommerceRouter(group)
 		product.InitProductRouter(group)
