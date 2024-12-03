@@ -33,6 +33,7 @@ func (*Order) list(c *gin.Context) {
 		OrderNumber:   c.DefaultQuery("orderNumber", ""),
 		Specification: c.DefaultQuery("specification", ""),
 		CustomerId:    utils.DefaultQueryInt(c, "customerId", 0),
+		Status:        utils.DefaultQueryInt(c, "status", 0),
 	}
 	begTime := c.DefaultQuery("begTime", "")
 	endTime := c.DefaultQuery("endTime", "")

@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"time"
 	"warehouse_oa/internal/global"
@@ -28,7 +29,11 @@ func GetFinishedList(finished *models.Finished,
 	}
 	if b {
 		db = db.Where("in_and_out = ?", b)
+	} else {
+		db = db.Where("status != ?", 1)
 	}
+
+	logrus.Infof("%s --- %s", begTime, endTime)
 
 	return Pagination(db, []models.Finished{}, pn, pSize)
 }
@@ -120,7 +125,7 @@ func SaveFinished(finished *models.Finished) (*models.Finished, error) {
 			StockUser:        finished.Operator,
 			StockTime:        time.Now(),
 			OperationType:    "出库",
-			OperationDetails: fmt.Sprintf("报工生产【%s成品】消耗", finished.Name),
+			OperationDetails: fmt.Sprintf("报工生产【%s】", finished.Name),
 		})
 		if err != nil {
 			return nil, err
@@ -208,7 +213,7 @@ func VoidFinished(id int, username string) error {
 			StockUser:        username,
 			StockTime:        time.Now(),
 			OperationType:    "入库",
-			OperationDetails: fmt.Sprintf("报工生产【%s成品】作废重新入库", data.Name),
+			OperationDetails: fmt.Sprintf("报工生产【%s】作废重新入库", data.Name),
 		})
 		if err != nil {
 			return err
@@ -314,7 +319,7 @@ func DelFinished(id int, username string) error {
 			StockUser:        username,
 			StockTime:        time.Now(),
 			OperationType:    "入库",
-			OperationDetails: fmt.Sprintf("报工生产【%s成品】删除重新入库", data.Name),
+			OperationDetails: fmt.Sprintf("报工生产【%s】删除重新入库", data.Name),
 		})
 		if err != nil {
 			return err

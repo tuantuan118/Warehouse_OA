@@ -30,7 +30,7 @@ func GetPermissionList(permission *models.Permission, pn, pSize int) (interface{
 
 	if pn != 0 && pSize != 0 {
 		offset := (pn - 1) * pSize
-		db = db.Order("parent_id asc, 'order' desc").Limit(pSize).Offset(offset)
+		db = db.Order("`order` asc").Limit(pSize).Offset(offset)
 	}
 
 	err := db.Find(&data).Error

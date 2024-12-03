@@ -17,7 +17,7 @@ func Ticker() {
 		finished := make([]models.Finished, 0)
 
 		db := global.Db.Model(&models.Finished{})
-		db = db.Where("finish_time <= ?", time.Now())
+		db = db.Where("estimated_time <= ?", time.Now())
 		db = db.Where("status = ?", 1)
 		err := db.Find(&finished).Error
 		if err != nil {
@@ -26,10 +26,6 @@ func Ticker() {
 
 		for _, v := range finished {
 			v.Status = 4
-			//err = SaveFinishedStockByInBound(&v)
-			//if err != nil {
-			//	logrus.Infoln("定时任务新增产品库存错误: ", err.Error())
-			//}
 
 			_, err = UpdateFinished(&v)
 			if err != nil {

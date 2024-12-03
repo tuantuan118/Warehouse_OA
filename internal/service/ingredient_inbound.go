@@ -310,15 +310,23 @@ func FinishedSaveInBound(tx *gorm.DB, inBound *models.IngredientInBound) error {
 
 func GetOutInBoundList(id int, supplier, stockUser, begTime, endTime string,
 	pn, pSize int) (interface{}, error) {
-	inventory, err := GetInventoryById(id)
-	if err != nil {
-		return nil, err
+
+	var name string
+	var stockUnit string
+	if id != 0 {
+		inventory, err := GetInventoryById(id)
+		if err != nil {
+			return nil, err
+		}
+		name = inventory.Ingredient.Name
+		stockUnit = fmt.Sprintf("%s", inventory.StockUnit)
 	}
+
 	return GetInBoundList(
-		inventory.Ingredient.Name,
+		name,
 		supplier,
 		stockUser,
-		fmt.Sprintf("%d", inventory.StockUnit),
+		stockUnit,
 		begTime,
 		endTime,
 		pn,

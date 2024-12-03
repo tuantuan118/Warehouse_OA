@@ -4,106 +4,79 @@ import (
 	"strings"
 )
 
-// 数字对应的中文大写
-var digitUpper = []string{"零", "壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖"}
-var unitUpper = []string{"", "拾", "佰", "仟"}
-var sectionUpper = []string{"", "万", "亿", "兆"}
+// NumberToChinese 阿拉伯数字转中文大写金额
+func NumberToChinese(amount float64) string {
+	units := []string{"", "拾", "佰", "仟"}
+	largeUnits := []string{"", "万", "亿", "兆"}
+	digits := []string{"零", "壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖"}
 
-// 转换整数部分
-func convertIntegerPart(num int64) string {
-	if num == 0 {
-		return "零元"
-	}
+	integerPart := int64(amount)
+	decimalPart := int64((amount - float64(integerPart)) * 100) // 保留小数点后两位
 
 	var result strings.Builder
-	sectionIndex := 0
-	zeroFlag := false // 标记连续零
 
-	for num > 0 {
-		section := num % 10000
-		num /= 10000
-
-		if section == 0 {
-			if !zeroFlag && sectionIndex > 0 {
-				result.WriteString(sectionUpper[sectionIndex])
+	// 转换整数部分
+	if integerPart == 0 {
+		result.WriteString("零")
+	} else {
+		sectionIndex := 0 // 当前段落计数
+		for integerPart > 0 {
+			section := integerPart % 10000
+			if section > 0 {
+				sectionResult := convertSection(int(section), digits, units)
+				if sectionIndex > 0 {
+					sectionResult += largeUnits[sectionIndex]
+				}
+				result.WriteString(sectionResult)
 			}
-			zeroFlag = true
-		} else {
-			zeroFlag = false
-			sectionStr := convertSection(int(section))
-			if sectionIndex > 0 {
-				sectionStr += sectionUpper[sectionIndex]
-			}
-			result.WriteString(sectionStr)
+			integerPart /= 10000
+			sectionIndex++
 		}
-
-		sectionIndex++
 	}
 
-	runes := []rune(result.String())
-	// 反转字符串
-	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
-		runes[i], runes[j] = runes[j], runes[i]
+	// 处理小数部分
+	result.WriteString("圆")
+	if decimalPart > 0 {
+		jiao := decimalPart / 10
+		fen := decimalPart % 10
+		if jiao > 0 {
+			result.WriteString(digits[jiao] + "角")
+		}
+		if fen > 0 {
+			result.WriteString(digits[fen] + "分")
+		}
+	} else {
+		result.WriteString("整")
 	}
 
-	return string(runes) + "元"
+	return reverseString(result.String())
 }
 
-// 转换小节（4位数）
-func convertSection(section int) string {
-	var result strings.Builder
-	zeroFlag := true
-
+// convertSection 转换每个四位小节
+func convertSection(section int, digits, units []string) string {
+	var sectionResult strings.Builder
+	zero := true // 是否需要写零
 	for i := 0; section > 0; i++ {
 		digit := section % 10
-		section /= 10
-
 		if digit == 0 {
-			if !zeroFlag {
-				result.WriteString(digitUpper[0])
-				zeroFlag = true
+			if !zero {
+				sectionResult.WriteString(digits[0])
+				zero = true
 			}
 		} else {
-			zeroFlag = false
-			result.WriteString(unitUpper[i])
-			result.WriteString(digitUpper[digit])
+			sectionResult.WriteString(units[i] + digits[digit])
+			zero = false
 		}
+		section /= 10
 	}
+	return reverseString(sectionResult.String())
+}
 
-	runes := []rune(result.String())
-	// 反转字符串
+// reverseString 字符串反转
+func reverseString(s string) string {
+	runes := []rune(s)
 	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
 		runes[i], runes[j] = runes[j], runes[i]
 	}
-
 	return string(runes)
-}
-
-// 转换小数部分
-func convertDecimalPart(num float64) string {
-	decimal := int((num - float64(int(num))) * 100)
-	if decimal == 0 {
-		return "整"
-	}
-
-	jiao := decimal / 10
-	fen := decimal % 10
-
-	var result strings.Builder
-	if jiao > 0 {
-		result.WriteString(digitUpper[jiao] + "角")
-	}
-	if fen > 0 {
-		result.WriteString(digitUpper[fen] + "分")
-	}
-
-	return result.String()
-}
-
-// MoneyToUpper 金额转大写
-func MoneyToUpper(amount float64) string {
-	integerPart := int64(amount)
-	decimalPart := amount - float64(integerPart)
-
-	return convertIntegerPart(integerPart) + convertDecimalPart(decimalPart)
 }

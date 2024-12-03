@@ -57,13 +57,15 @@ func GetOrderList(order *models.Order, begTime, endTime string, pn, pSize int, u
 		offset := (pn - 1) * pSize
 		db = db.Order("id desc").Limit(pSize).Offset(offset)
 	}
-
+	
 	data := make([]models.Order, 0)
 	err = db.Find(&data).Error
 
 	for n, _ := range data {
 		data[n].ImageList = make([]string, 0)
-		data[n].ImageList = strings.Split(data[n].Images, ";")
+		if data[n].Images != "" {
+			data[n].ImageList = strings.Split(data[n].Images, ";")
+		}
 	}
 
 	return map[string]interface{}{
@@ -80,7 +82,7 @@ func GetOrderById(id int) (*models.Order, error) {
 	data := &models.Order{}
 	db = db.Preload("UserList")
 	db = db.Preload("Customer")
-	db = db.Preload("Ingredient")
+	db = db.Preload("Ingredient.IngredientInventory")
 	err := db.Where("id = ?", id).First(&data).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.New("user does not exist")
@@ -286,6 +288,10 @@ func SaveOutBound(id int, username string) error {
 		return err
 	}
 
+	if data.Status != 1 {
+		return errors.New("order has been finished, can not out")
+	}
+
 	product, err := GetProductById(data.ProductId)
 	if err != nil {
 		return err
@@ -317,10 +323,30 @@ func SaveOutBound(id int, username string) error {
 		FinishedManageId: product.FinishedManageId,
 		FinishedManage:   manageId,
 		OperationType:    "出库",
-		OperationDetails: fmt.Sprintf("【%s产品】销售出库", product.Name),
+		OperationDetails: fmt.Sprintf("【%s】销售出库", product.Name),
 	})
 	if err != nil {
 		return err
+	}
+
+	for _, i := range data.Ingredient {
+		logrus.Infoln("1111111111111111")
+		logrus.Infoln(i)
+		err = FinishedSaveInBound(tx, &models.IngredientInBound{
+			BaseModel: models.BaseModel{
+				Operator: username,
+			},
+			IngredientID:     i.IngredientInventory.IngredientID,
+			StockNum:         0 - i.Quantity,
+			StockUnit:        i.IngredientInventory.StockUnit,
+			StockUser:        username,
+			StockTime:        time.Now(),
+			OperationType:    "出库",
+			OperationDetails: fmt.Sprintf("订单编号【%s】附加材料", data.OrderNumber),
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	data.Operator = username
@@ -393,7 +419,7 @@ func ExportOrder(order *models.Order) ([]byte, error) {
 	if err := f.SetCellValue("Sheet1", "G11", G11); err != nil {
 		return nil, err
 	}
-	B13 := fmt.Sprintf("合计(大写): %s", utils.MoneyToUpper(data.TotalPrice))
+	B13 := fmt.Sprintf("合计(大写): %s", utils.NumberToChinese(data.TotalPrice))
 	if err := f.SetCellValue("Sheet1", "B13", B13); err != nil {
 		return nil, err
 	}
