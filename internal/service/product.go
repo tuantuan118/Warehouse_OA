@@ -13,13 +13,14 @@ import (
 func GetProductList(product *models.Product, pn, pSize int) (interface{}, error) {
 	db := global.Db.Model(&models.Product{})
 
+	if product.ID != 0 {
+		db = db.Where("id = ?", product.ID)
+	}
 	if product.Name != "" {
 		slice := strings.Split(product.Name, ";")
 		db = db.Where("name in ?", slice)
 	}
-	if product.OrderNumber != "" {
-		db = db.Where("name LIKE %?%", product.OrderNumber)
-	}
+
 	db = db.Preload("FinishedManage")
 
 	return Pagination(db, []models.Product{}, pn, pSize)

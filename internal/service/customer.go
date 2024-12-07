@@ -65,6 +65,11 @@ func DelCustomer(id int, username string) error {
 		return errors.New("user does not exist")
 	}
 
+	err = GetOrderByCustomer(id)
+	if err != nil {
+		return errors.New("existing orders")
+	}
+
 	data.Operator = username
 	data.IsDeleted = true
 	err = global.Db.Updates(&data).Error

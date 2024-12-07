@@ -2,8 +2,9 @@ package service
 
 import (
 	"errors"
-	"github.com/sirupsen/logrus"
+	"fmt"
 	"gorm.io/gorm"
+	"strings"
 	"warehouse_oa/internal/global"
 	"warehouse_oa/internal/models"
 )
@@ -44,6 +45,38 @@ func GetInventoryById(id int) (*models.IngredientInventory, error) {
 	return data, err
 }
 
+func GetInventoryStockNumById(ingredientId int) (*models.IngredientInventory, error) {
+	db := global.Db.Model(&models.IngredientInventory{})
+
+	data := &models.IngredientInventory{}
+	err := db.Where("ingredient_id = ?", ingredientId).First(&data).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.New("user does not exist")
+	}
+
+	return data, err
+}
+
+func GetInventoryByIdList(ids string) ([]string, []string, error) {
+	slice := strings.Split(ids, ";")
+
+	db := global.Db.Model(&models.IngredientInventory{})
+	data := make([]models.IngredientInventory, 0)
+	err := db.Preload("Ingredient").Where("id in ?", slice).Find(&data).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil, errors.New("user does not exist")
+	}
+
+	names := make([]string, 0)
+	stockUnits := make([]string, 0)
+	for _, v := range data {
+		names = append(names, v.Ingredient.Name)
+		stockUnits = append(stockUnits, fmt.Sprintf("%d", v.StockUnit))
+	}
+
+	return names, stockUnits, err
+}
+
 func SaveInventoryByInBound(db *gorm.DB, inBound *models.IngredientInBound) error {
 	data := &models.IngredientInventory{}
 	var total int64
@@ -82,10 +115,6 @@ func SaveInventoryByInBound(db *gorm.DB, inBound *models.IngredientInBound) erro
 	}
 
 	data.StockNum += inBound.StockNum
-
-	if data.StockNum < 0 {
-		return errors.New("insufficient inventory")
-	}
 
 	return db.Select("stock_num").Updates(&data).Error
 }
@@ -135,25 +164,6 @@ func UpdateInventoryByInBound(db *gorm.DB, oldInBound *models.IngredientInBound)
 	return global.Db.Select("stock_num").Updates(&data).Error
 }
 
-func UpdateIngredientStockNum(db *gorm.DB, id int, total int) error {
-	logrus.Infoln(total)
-	if id == 0 {
-		return errors.New("id is 0")
-	}
-
-	inventory, err := GetInventoryById(id)
-	if err != nil {
-		return err
-	}
-	if inventory.StockNum+total < 0 {
-		return errors.New("stock not enough")
-	}
-
-	inventory.StockNum += total
-
-	return db.Updates(&inventory).Error
-}
-
 // GetInventoryFieldList 获取字段列表
 func GetInventoryFieldList(field string) (map[string]string, error) {
 	db := global.Db.Model(&models.IngredientInventory{})
@@ -171,3 +181,22 @@ func GetInventoryFieldList(field string) (map[string]string, error) {
 
 	return fields, nil
 }
+
+//func UpdateIngredientStockNum(db *gorm.DB, id int, total int) error {
+//	logrus.Infoln(total)
+//	if id == 0 {
+//		return errors.New("id is 0")
+//	}
+//
+//	inventory, err := GetInventoryById(id)
+//	if err != nil {
+//		return err
+//	}
+//	if inventory.StockNum+total < 0 {
+//		return errors.New("stock not enough")
+//	}
+//
+//	inventory.StockNum += total
+//
+//	return db.Updates(&inventory).Error
+//}

@@ -6,6 +6,6 @@ type IngredientInventory struct {
 	Ingredient    *Ingredients `gorm:"foreignKey:IngredientID" json:"ingredient"`
 	Specification string       `gorm:"type:varchar(256)" json:"specification"`
 	Price         float64      `gorm:"type:decimal(12,2)" json:"price"`
-	StockNum      int          `gorm:"type:int(11)" json:"stockNum"`
+	StockNum      float64      `gorm:"type:decimal(16,4)" json:"stockNum"`
 	StockUnit     int          `gorm:"type:int(2)" json:"stockUnit"`
 }

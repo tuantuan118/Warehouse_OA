@@ -10,9 +10,11 @@ import (
 func GetPermissionList(permission *models.Permission, pn, pSize int) (interface{}, error) {
 	db := global.Db.Model(&models.Permission{})
 
-	db = db.Where("enabled = ?", permission.Enabled)
 	if permission.Name != "" {
-		db = db.Where("name = ?", permission.Name)
+		db = db.Where("name LIKE ?", "%"+permission.Name+"%")
+	}
+	if permission.NameEn != "" {
+		db = db.Where("name_en = ?", permission.NameEn)
 	}
 	if permission.Coding != "" {
 		db = db.Where("coding = ?", permission.Coding)
@@ -75,7 +77,7 @@ func UpdatePermission(permission *models.Permission) (*models.Permission, error)
 		permission.ParentID = nil
 	}
 
-	return permission, global.Db.Updates(&permission).Error
+	return permission, global.Db.Save(&permission).Error
 }
 
 func DelPermission(id int, username string) error {

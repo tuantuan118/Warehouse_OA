@@ -41,7 +41,7 @@ func UpdateRole(role *models.Role) (*models.Role, error) {
 
 	role.Permissions = nil
 
-	return role, global.Db.Updates(&role).Error
+	return role, global.Db.Save(&role).Error
 }
 
 func DelRole(id int, username string) error {

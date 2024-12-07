@@ -15,22 +15,29 @@ import (
 	"warehouse_oa/utils"
 )
 
-func GetOrderList(order *models.Order, begTime, endTime string, pn, pSize int, userId int) (interface{}, error) {
+func GetOrderList(order *models.Order, customerStr, begTime, endTime string, pn, pSize int, userId int) (interface{}, error) {
 	db := global.Db.Model(&models.Order{})
 
 	if order.OrderNumber != "" {
-		db = db.Where("order_number = ?", order.OrderNumber)
+		slice := strings.Split(order.OrderNumber, ";")
+		db = db.Where("order_number in ?", slice)
 	}
 	if order.Name != "" {
-		db = db.Where("name = ?", order.Name)
+		slice := strings.Split(order.Name, ";")
+		db = db.Where("name in ?", slice)
 	}
 	if order.Specification != "" {
 		db = db.Where("specification = ?", order.Specification)
 	}
-	if order.CustomerId != 0 {
-		db = db.Where("customer_id = ?", order.CustomerId)
+	if order.Salesman != "" {
+		slice := strings.Split(order.Salesman, ";")
+		db = db.Where("salesman in ?", slice)
 	}
-	if order.Status > 0 {
+	if customerStr != "" {
+		slice := strings.Split(customerStr, ";")
+		db = db.Where("customer_id in ?", slice)
+	}
+	if order.Status != 0 {
 		db = db.Where("status = ?", order.Status)
 	}
 	if begTime != "" && endTime != "" {
@@ -57,7 +64,7 @@ func GetOrderList(order *models.Order, begTime, endTime string, pn, pSize int, u
 		offset := (pn - 1) * pSize
 		db = db.Order("id desc").Limit(pSize).Offset(offset)
 	}
-	
+
 	data := make([]models.Order, 0)
 	err = db.Find(&data).Error
 
@@ -65,6 +72,22 @@ func GetOrderList(order *models.Order, begTime, endTime string, pn, pSize int, u
 		data[n].ImageList = make([]string, 0)
 		if data[n].Images != "" {
 			data[n].ImageList = strings.Split(data[n].Images, ";")
+		}
+
+		if data[n].FinishPriceStr == "" {
+			continue
+		}
+		data[n].FinishPriceList = make([]map[string]string, 0)
+		fpl := strings.Split(data[n].FinishPriceStr, ";")
+		for _, f := range fpl {
+			fp := strings.Split(f, "&")
+			if len(fp) != 2 {
+				continue
+			}
+			data[n].FinishPriceList = append(data[n].FinishPriceList, map[string]string{
+				"time":  fp[0],
+				"price": fp[1],
+			})
 		}
 	}
 
@@ -207,37 +230,34 @@ func UpdateOrder(order *models.Order) (*models.Order, error) {
 	return order, global.Db.Updates(&order).Error
 }
 
-func FinishOrder(order *models.Order) (*models.Order, error) {
-	if order.ID == 0 {
+func FinishOrder(id int, totalPrice float64) (*models.Order, error) {
+	if id == 0 {
 		return nil, errors.New("id is 0")
 	}
-	oldData, err := GetOrderById(order.ID)
+	data, err := GetOrderById(id)
 	if err != nil {
 		return nil, err
 	}
 
-	if oldData.Status != 2 {
+	if data.Status != 2 {
 		return nil, errors.New("order has been finished, can not update")
 	}
 
-	order.Amount = 0
-	order.Price = 0
-	order.OrderNumber = ""
-	order.Name = ""
-	order.UserList = nil
+	data.UnFinishPrice = data.UnFinishPrice - totalPrice
+	data.FinishPrice += totalPrice
 
-	order.UnFinishPrice = oldData.UnFinishPrice - order.FinishPrice
-	order.FinishPrice += oldData.FinishPrice
+	str := fmt.Sprintf("%s&%f;", time.Now().Format("2006-01-02 15:04:05"), totalPrice)
+	data.FinishPriceStr += str
 
-	if oldData.TotalPrice <= order.FinishPrice {
-		order.Status = 3
+	if data.UnFinishPrice > 0 {
+		data.Status = 2
 	} else {
-		order.Status = 2
+		data.Status = 3
 	}
 
-	return order, global.Db.Select("UnFinishPrice",
-		"FinishPrice",
-		"Status").Updates(&order).Error
+	return data, global.Db.Select("UnFinishPrice",
+		"FinishPrice", "FinishPriceStr",
+		"Status").Updates(&data).Error
 }
 func VoidOrder(id int, username string) error {
 	if id == 0 {
@@ -337,7 +357,7 @@ func SaveOutBound(id int, username string) error {
 				Operator: username,
 			},
 			IngredientID:     i.IngredientInventory.IngredientID,
-			StockNum:         0 - i.Quantity,
+			StockNum:         float64(0 - i.Quantity),
 			StockUnit:        i.IngredientInventory.StockUnit,
 			StockUser:        username,
 			StockTime:        time.Now(),
@@ -419,7 +439,8 @@ func ExportOrder(order *models.Order) ([]byte, error) {
 	if err := f.SetCellValue("Sheet1", "G11", G11); err != nil {
 		return nil, err
 	}
-	B13 := fmt.Sprintf("合计(大写): %s", utils.NumberToChinese(data.TotalPrice))
+	totalPrice := utils.AmountConvert(data.TotalPrice, true)
+	B13 := fmt.Sprintf("合计(大写): %s", totalPrice)
 	if err := f.SetCellValue("Sheet1", "B13", B13); err != nil {
 		return nil, err
 	}
@@ -465,19 +486,26 @@ func ExportOrder(order *models.Order) ([]byte, error) {
 }
 
 // GetOrderFieldList 获取字段列表
-func GetOrderFieldList(field string) ([]string, error) {
+func GetOrderFieldList(field string, userId int) ([]string, error) {
 	db := global.Db.Model(&models.Order{})
 	switch field {
 	case "name":
-		db.Distinct("name")
+		db = db.Distinct("name")
 	case "orderNumber":
-		db.Distinct("order_number")
+		db = db.Distinct("order_number")
 	case "specification":
-		db.Distinct("specification")
+		db = db.Distinct("specification")
 	case "salesman":
-		db.Distinct("salesman")
+		db = db.Distinct("salesman")
 	default:
 		return nil, errors.New("field not exist")
+	}
+	b, err := getAdmin(userId)
+	if err != nil {
+		return nil, err
+	}
+	if !b {
+		db = db.Where(" id in (select order_id from tb_order_user where user_id = ?)", userId)
 	}
 	fields := make([]string, 0)
 	if err := db.Scan(&fields).Error; err != nil {
@@ -519,4 +547,16 @@ func getOrderUser(userList []models.User) string {
 		userStr += user.Nickname + ", "
 	}
 	return strings.TrimRight(userStr, ", ")
+}
+
+func GetOrderByCustomer(customerId int) error {
+	db := global.Db.Model(&models.Order{})
+
+	data := &models.Order{}
+	err := db.Where("customer_id = ?", customerId).First(&data).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return errors.New("user does not exist")
+	}
+
+	return err
 }

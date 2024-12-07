@@ -7,6 +7,8 @@ import (
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 	"math/big"
+	"strings"
+	"time"
 	"warehouse_oa/internal/global"
 	"warehouse_oa/internal/models"
 	"warehouse_oa/utils"
@@ -56,14 +58,49 @@ func GetInBoundList(name, supplier, stockUser, stockUnit, begTime, endTime strin
 		db = db.Where("in_and_out = ?", b)
 	}
 	db = db.Preload("Ingredient")
-	m, err := Pagination(db, []models.IngredientInBound{}, pn, pSize)
+
+	var total int64
+	if err := db.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	if pn != 0 && pSize != 0 {
+		offset := (pn - 1) * pSize
+		db = db.Order("id desc").Limit(pSize).Offset(offset)
+	}
+
+	data := make([]models.IngredientInBound, 0)
+	err = db.Find(&data).Error
 	if err != nil {
 		return nil, err
 	}
 
-	m["sum_total_price"] = totalPrice
+	for n, _ := range data {
+		if data[n].FinishPriceStr == "" {
+			continue
+		}
+		data[n].FinishPriceList = make([]map[string]string, 0)
+		fpl := strings.Split(data[n].FinishPriceStr, ";")
+		for _, f := range fpl {
+			fp := strings.Split(f, "&")
+			if len(fp) != 2 {
+				continue
+			}
+			data[n].FinishPriceList = append(data[n].FinishPriceList, map[string]string{
+				"time":  fp[0],
+				"price": fp[1],
+			})
+		}
+	}
 
-	return m, nil
+	return map[string]interface{}{
+		"data":            data,
+		"pageNo":          pn,
+		"pageSize":        pSize,
+		"totalCount":      total,
+		"sum_total_price": totalPrice,
+	}, err
+
 }
 
 func GetInBoundById(id int) (*models.IngredientInBound, error) {
@@ -85,13 +122,14 @@ func SaveInBound(inBound *models.IngredientInBound) (*models.IngredientInBound, 
 	}
 
 	price := big.NewFloat(inBound.Price)
-	stockNum := big.NewFloat(float64(inBound.StockNum))
+	stockNum := big.NewFloat(inBound.StockNum)
 	floatResult := new(big.Float).Mul(price, stockNum)
 	inBound.TotalPrice, _ = floatResult.Float64()
 	inBound.Ingredient = ingredients
 	inBound.InAndOut = true
 	inBound.OperationType = "入库"
 	inBound.OperationDetails = fmt.Sprintf("配料入库")
+	inBound.UnFinishPrice, _ = floatResult.Float64()
 
 	db := global.Db
 	tx := db.Begin()
@@ -142,7 +180,7 @@ func UpdateInBound(inBound *models.IngredientInBound) (*models.IngredientInBound
 		}
 	}()
 
-	inBound.TotalPrice = inBound.Price * float64(inBound.StockNum)
+	inBound.TotalPrice = inBound.Price * inBound.StockNum
 	err = tx.Updates(&inBound).Error
 	if err != nil {
 		return nil, err
@@ -319,7 +357,7 @@ func GetOutInBoundList(id int, supplier, stockUser, begTime, endTime string,
 			return nil, err
 		}
 		name = inventory.Ingredient.Name
-		stockUnit = fmt.Sprintf("%s", inventory.StockUnit)
+		stockUnit = fmt.Sprintf("%d", inventory.StockUnit)
 	}
 
 	return GetInBoundList(
@@ -333,4 +371,34 @@ func GetOutInBoundList(id int, supplier, stockUser, begTime, endTime string,
 		pSize,
 		false,
 	)
+}
+
+func FinishInBound(id int, totalPrice float64) (*models.IngredientInBound, error) {
+	if id == 0 {
+		return nil, errors.New("id is 0")
+	}
+	data, err := GetInBoundById(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if data.Status == 1 {
+		return nil, errors.New("ingredient has been finished, can not update")
+	}
+
+	data.UnFinishPrice = data.UnFinishPrice - totalPrice
+	data.FinishPrice += totalPrice
+
+	str := fmt.Sprintf("%s&%f;", time.Now().Format("2006-01-02 15:04:05"), totalPrice)
+	data.FinishPriceStr += str
+
+	if data.UnFinishPrice > 0 {
+		data.Status = 0
+	} else {
+		data.Status = 1
+	}
+
+	return data, global.Db.Select("UnFinishPrice",
+		"FinishPrice", "FinishPriceStr",
+		"Status").Updates(&data).Error
 }

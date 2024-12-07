@@ -3,6 +3,7 @@ package middlewares
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"warehouse_oa/utils"
 )
@@ -35,6 +36,9 @@ func JWTAuth() gin.HandlerFunc {
 			ctx.Abort()
 			return
 		}
+
+		logrus.Infoln(claims)
+		logrus.Infoln(claims.Id)
 
 		ctx.Set("claims", claims)
 		ctx.Set("userId", claims.Id)

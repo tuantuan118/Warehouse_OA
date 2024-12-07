@@ -27,6 +27,7 @@ func (*Permission) list(c *gin.Context) {
 	permission := &models.Permission{
 		BaseModel: models.BaseModel{},
 		Name:      c.DefaultQuery("name", ""),
+		NameEn:    c.DefaultQuery("nameEn", ""),
 		Coding:    c.DefaultQuery("coding", ""),
 		Type:      utils.DefaultQueryInt(c, "type", 0),
 		Enabled:   utils.DefaultQueryBool(c, "enabled", true),

@@ -19,6 +19,7 @@ func InitUserRouter(router *gin.RouterGroup) {
 	userRouter.GET("list", u.list)
 	userRouter.GET("fields", u.fields)
 	userRouter.GET("getPermissions", u.getPermissions)
+	userRouter.GET("getRoles", u.getRoles)
 	userRouter.POST("update", u.update)
 	userRouter.POST("delete", u.delete)
 	userRouter.POST("changePassword", u.changePassword)
@@ -129,13 +130,24 @@ func (*User) setRoles(c *gin.Context) {
 }
 
 func (*User) getPermissions(c *gin.Context) {
-	idStr := c.GetString("id")
+	idStr := c.GetString("userId")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		handler.BadRequest(c, "id参数错误")
 		return
 	}
 	data, err := service.GetRolePermissions(id)
+	if err != nil {
+		handler.InternalServerError(c, err)
+		return
+	}
+
+	handler.Success(c, data)
+}
+
+func (*User) getRoles(c *gin.Context) {
+	idStr := c.GetInt("userId")
+	data, err := service.GetRoles(idStr)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return

@@ -3,8 +3,8 @@ package service
 import (
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+	"strings"
 	"time"
 	"warehouse_oa/internal/global"
 	"warehouse_oa/internal/models"
@@ -14,12 +14,14 @@ func GetFinishedList(finished *models.Finished,
 	begTime, endTime string,
 	pn, pSize int, b bool) (interface{}, error) {
 	db := global.Db.Model(&models.Finished{})
+	db.Preload("FinishedManage")
 
 	if finished.FinishedManageId > 0 {
 		db = db.Where("finished_manage_id = ?", finished.FinishedManageId)
 	}
 	if finished.Name != "" {
-		db = db.Where("name = ?", finished.Name)
+		slice := strings.Split(finished.Name, ";")
+		db = db.Where("name in ?", slice)
 	}
 	if finished.Status > 0 {
 		db = db.Where("status = ?", finished.Status)
@@ -32,8 +34,6 @@ func GetFinishedList(finished *models.Finished,
 	} else {
 		db = db.Where("status != ?", 1)
 	}
-
-	logrus.Infof("%s --- %s", begTime, endTime)
 
 	return Pagination(db, []models.Finished{}, pn, pSize)
 }
@@ -120,7 +120,7 @@ func SaveFinished(finished *models.Finished) (*models.Finished, error) {
 				Operator: finished.Operator,
 			},
 			IngredientID:     material.IngredientInventory.IngredientID,
-			StockNum:         0 - (material.Quantity * finished.ExpectAmount),
+			StockNum:         0 - (material.Quantity * float64(finished.ExpectAmount)),
 			StockUnit:        material.IngredientInventory.StockUnit,
 			StockUser:        finished.Operator,
 			StockTime:        time.Now(),
@@ -208,7 +208,7 @@ func VoidFinished(id int, username string) error {
 				Operator: username,
 			},
 			IngredientID:     material.IngredientInventory.IngredientID,
-			StockNum:         material.Quantity * data.ExpectAmount,
+			StockNum:         material.Quantity * float64(data.ExpectAmount),
 			StockUnit:        material.IngredientInventory.StockUnit,
 			StockUser:        username,
 			StockTime:        time.Now(),
@@ -314,7 +314,7 @@ func DelFinished(id int, username string) error {
 				Operator: username,
 			},
 			IngredientID:     material.IngredientInventory.IngredientID,
-			StockNum:         material.Quantity * data.ExpectAmount,
+			StockNum:         material.Quantity * float64(data.ExpectAmount),
 			StockUnit:        material.IngredientInventory.StockUnit,
 			StockUser:        username,
 			StockTime:        time.Now(),

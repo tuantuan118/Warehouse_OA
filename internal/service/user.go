@@ -199,6 +199,28 @@ func GetRolePermissions(id int) (interface{}, error) {
 	return permissions, nil
 }
 
+// GetRoles 获取角色列表
+func GetRoles(id int) (interface{}, error) {
+	if id == 0 {
+		return nil, errors.New("id is 0")
+	}
+
+	db := global.Db.Model(&models.User{})
+
+	data := &models.User{}
+	err := db.Where("id = ?", id).Preload("Roles").First(&data).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.New("role does not exist")
+	}
+
+	ids := make([]int, 0)
+	for _, role := range data.Roles {
+		ids = append(ids, role.ID)
+	}
+
+	return ids, nil
+}
+
 func getAdmin(userId int) (bool, error) {
 	var total int64
 	err := global.Db.Table("tb_user_role").Where(

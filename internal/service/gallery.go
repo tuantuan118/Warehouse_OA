@@ -16,7 +16,7 @@ func GetGalleryList(gallery *models.Gallery, pn, pSize int) (interface{}, error)
 	db := global.Db.Model(&models.Gallery{})
 
 	if gallery.Name != "" {
-		db = db.Where("name LIKE %?%", gallery.Name)
+		db = db.Where("name LIKE ?", "%"+gallery.Name+"%")
 	}
 
 	var total int64

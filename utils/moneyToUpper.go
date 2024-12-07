@@ -1,82 +1,57 @@
 package utils
 
 import (
-	"strings"
+	"math"
+	"regexp"
+	"strconv"
 )
 
-// NumberToChinese 阿拉伯数字转中文大写金额
-func NumberToChinese(amount float64) string {
-	units := []string{"", "拾", "佰", "仟"}
-	largeUnits := []string{"", "万", "亿", "兆"}
-	digits := []string{"零", "壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖"}
-
-	integerPart := int64(amount)
-	decimalPart := int64((amount - float64(integerPart)) * 100) // 保留小数点后两位
-
-	var result strings.Builder
-
-	// 转换整数部分
-	if integerPart == 0 {
-		result.WriteString("零")
+func AmountConvert(pMoney float64, pRound bool) string {
+	var NumberUpper = []string{"壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖", "零"}
+	var Unit = []string{"分", "角", "圆", "拾", "佰", "仟", "万", "拾", "佰", "仟", "亿", "拾", "佰", "仟"}
+	var regex = [][]string{
+		{"零拾", "零"}, {"零佰", "零"}, {"零仟", "零"}, {"零零零", "零"}, {"零零", "零"},
+		{"零角零分", "整"}, {"零分", "整"}, {"零角", "零"}, {"零亿零万零元", "亿元"},
+		{"亿零万零元", "亿元"}, {"零亿零万", "亿"}, {"零万零元", "万元"}, {"万零元", "万元"},
+		{"零亿", "亿"}, {"零万", "万"}, {"拾零圆", "拾元"}, {"零圆", "元"}, {"零零", "零"}}
+	str, DigitUpper, UnitLen, round := "", "", 0, 0
+	if pMoney == 0 {
+		return "零"
+	}
+	if pMoney < 0 {
+		str = "负"
+		pMoney = math.Abs(pMoney)
+	}
+	if pRound {
+		round = 2
 	} else {
-		sectionIndex := 0 // 当前段落计数
-		for integerPart > 0 {
-			section := integerPart % 10000
-			if section > 0 {
-				sectionResult := convertSection(int(section), digits, units)
-				if sectionIndex > 0 {
-					sectionResult += largeUnits[sectionIndex]
-				}
-				result.WriteString(sectionResult)
+		round = 1
+	}
+	digitByte := []byte(strconv.FormatFloat(pMoney, 'f', round+1, 64)) //注意币种四舍五入
+	UnitLen = len(digitByte) - round
+
+	for _, v := range digitByte {
+		if UnitLen >= 1 && v != 46 {
+			s, _ := strconv.ParseInt(string(v), 10, 0)
+			if s != 0 {
+				DigitUpper = NumberUpper[s-1]
+
+			} else {
+				DigitUpper = "零"
 			}
-			integerPart /= 10000
-			sectionIndex++
+			str = str + DigitUpper + Unit[UnitLen-1]
+			UnitLen = UnitLen - 1
 		}
 	}
-
-	// 处理小数部分
-	result.WriteString("圆")
-	if decimalPart > 0 {
-		jiao := decimalPart / 10
-		fen := decimalPart % 10
-		if jiao > 0 {
-			result.WriteString(digits[jiao] + "角")
-		}
-		if fen > 0 {
-			result.WriteString(digits[fen] + "分")
-		}
-	} else {
-		result.WriteString("整")
+	for i, _ := range regex {
+		reg := regexp.MustCompile(regex[i][0])
+		str = reg.ReplaceAllString(str, regex[i][1])
 	}
-
-	return reverseString(result.String())
-}
-
-// convertSection 转换每个四位小节
-func convertSection(section int, digits, units []string) string {
-	var sectionResult strings.Builder
-	zero := true // 是否需要写零
-	for i := 0; section > 0; i++ {
-		digit := section % 10
-		if digit == 0 {
-			if !zero {
-				sectionResult.WriteString(digits[0])
-				zero = true
-			}
-		} else {
-			sectionResult.WriteString(units[i] + digits[digit])
-			zero = false
-		}
-		section /= 10
+	if string(str[0:3]) == "元" {
+		str = string(str[3:len(str)])
 	}
-	return reverseString(sectionResult.String())
-}
-
-// reverseString 字符串反转
-func reverseString(s string) string {
-	runes := []rune(s)
-	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
-		runes[i], runes[j] = runes[j], runes[i]
+	if string(str[0:3]) == "零" {
+		str = string(str[3:len(str)])
 	}
-	return string(runes)
+	return str
 }

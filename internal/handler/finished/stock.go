@@ -24,10 +24,10 @@ func (*stock) list(c *gin.Context) {
 	finishedStock := &models.FinishedStock{
 		Name: c.DefaultQuery("name", ""),
 	}
-	begReportingTime := c.DefaultQuery("begReportingTime", "")
-	endReportingTime := c.DefaultQuery("endReportingTime", "")
+	begTime := c.DefaultQuery("begTime", "")
+	endTime := c.DefaultQuery("endTime", "")
 
-	data, err := service.GetFinishedStockList(finishedStock, begReportingTime, endReportingTime, pn, pSize)
+	data, err := service.GetFinishedStockList(finishedStock, begTime, endTime, pn, pSize)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return

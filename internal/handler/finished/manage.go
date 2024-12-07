@@ -25,10 +25,10 @@ func InitManageRouter(router *gin.RouterGroup) {
 
 func (*Manage) list(c *gin.Context) {
 	pn, pSize := utils.ParsePaginationParams(c)
-	id := c.DefaultQuery("id", "")
+	ids := c.DefaultQuery("id", "")
 	name := c.DefaultQuery("name", "")
 
-	data, err := service.GetFinishedManageList(id, name, pn, pSize)
+	data, err := service.GetFinishedManageList(ids, name, pn, pSize)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return

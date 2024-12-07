@@ -22,6 +22,7 @@ func InitInBoundRouter(router *gin.RouterGroup) {
 	inBoundRouter.POST("add", ib.add)
 	inBoundRouter.POST("update", ib.update)
 	inBoundRouter.POST("delete", ib.delete)
+	inBoundRouter.POST("finishInBound", ib.finishInBound)
 }
 
 func (*InBound) list(c *gin.Context) {
@@ -95,6 +96,24 @@ func (*InBound) delete(c *gin.Context) {
 	}
 
 	handler.Success(c, nil)
+}
+
+func (*InBound) finishInBound(c *gin.Context) {
+	order := &models.IngredientInBound{}
+	if err := c.ShouldBindJSON(order); err != nil {
+		// 如果解析失败，返回 400 错误和错误信息
+		handler.BadRequest(c, err.Error())
+		return
+	}
+
+	order.Operator = c.GetString("userName")
+	data, err := service.FinishInBound(order.ID, order.TotalPrice)
+	if err != nil {
+		handler.InternalServerError(c, err)
+		return
+	}
+
+	handler.Success(c, data)
 }
 
 func (*InBound) export(c *gin.Context) {

@@ -32,14 +32,15 @@ func (*Order) list(c *gin.Context) {
 		Name:          c.DefaultQuery("name", ""),
 		OrderNumber:   c.DefaultQuery("orderNumber", ""),
 		Specification: c.DefaultQuery("specification", ""),
-		CustomerId:    utils.DefaultQueryInt(c, "customerId", 0),
+		Salesman:      c.DefaultQuery("salesman", ""),
 		Status:        utils.DefaultQueryInt(c, "status", 0),
 	}
+	customerStr := c.DefaultQuery("customerId", "")
 	begTime := c.DefaultQuery("begTime", "")
 	endTime := c.DefaultQuery("endTime", "")
 	userId := c.GetInt("userId")
 
-	data, err := service.GetOrderList(order, begTime, endTime, pn, pSize, userId)
+	data, err := service.GetOrderList(order, customerStr, begTime, endTime, pn, pSize, userId)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return
@@ -93,7 +94,7 @@ func (*Order) finishOrder(c *gin.Context) {
 	}
 
 	order.Operator = c.GetString("userName")
-	data, err := service.FinishOrder(order)
+	data, err := service.FinishOrder(order.ID, order.TotalPrice)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return
@@ -181,7 +182,9 @@ func (*Order) export(c *gin.Context) {
 
 func (*Order) fields(c *gin.Context) {
 	field := c.DefaultQuery("field", "")
-	data, err := service.GetOrderFieldList(field)
+	userId := c.GetInt("userId")
+
+	data, err := service.GetOrderFieldList(field, userId)
 	if err != nil {
 		handler.InternalServerError(c, err)
 		return

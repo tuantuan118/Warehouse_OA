@@ -8,11 +8,11 @@ import (
 	"warehouse_oa/internal/models"
 )
 
-func GetFinishedManageList(id, name string, pn, pSize int) (interface{}, error) {
+func GetFinishedManageList(ids, name string, pn, pSize int) (interface{}, error) {
 	db := global.Db.Model(&models.FinishedManage{})
 
-	if id != "" {
-		slice := strings.Split(name, ";")
+	if ids != "" {
+		slice := strings.Split(ids, ";")
 		db = db.Where("id in ?", slice)
 	}
 	if name != "" {

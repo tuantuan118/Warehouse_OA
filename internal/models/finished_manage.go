@@ -10,5 +10,5 @@ type FinishedMaterial struct {
 	FinishedManageID    int                  `gorm:"primaryKey;index" json:"finished_manage_id"`
 	IngredientID        int                  `gorm:"primaryKey;" json:"ingredient_id"`
 	IngredientInventory *IngredientInventory `gorm:"foreignKey:IngredientID" json:"ingredient_inventory"`
-	Quantity            int                  `gorm:"type:int(11);not null" json:"quantity"` // 用量
+	Quantity            float64              `gorm:"type:decimal(10,4);not null" json:"quantity"` // 用量
 }

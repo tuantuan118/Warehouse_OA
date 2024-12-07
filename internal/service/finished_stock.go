@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"gorm.io/gorm"
+	"strings"
 	"warehouse_oa/internal/global"
 	"warehouse_oa/internal/models"
 )
@@ -11,9 +12,11 @@ func GetFinishedStockList(finished *models.FinishedStock,
 	begReportingTime, endReportingTime string,
 	pn, pSize int) (interface{}, error) {
 	db := global.Db.Model(&models.FinishedStock{})
+	db.Preload("FinishedManage")
 
 	if finished.Name != "" {
-		db = db.Where("name = ?", finished.Name)
+		slice := strings.Split(finished.Name, ";")
+		db = db.Where("name in ?", slice)
 	}
 	if begReportingTime != "" && endReportingTime != "" {
 		db = db.Where("add_time BETWEEN ? AND ?", begReportingTime, endReportingTime)
@@ -27,6 +30,19 @@ func GetFinishedStockById(id int) (*models.FinishedStock, error) {
 
 	data := &models.FinishedStock{}
 	err := db.Where("id = ?", id).First(&data).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.New("user does not exist")
+	}
+
+	return data, err
+}
+
+func GetFinishedStockByIdList(ids string) ([]int, error) {
+	slice := strings.Split(ids, ";")
+
+	db := global.Db.Model(&models.FinishedStock{})
+	data := make([]int, 0)
+	err := db.Select("finished_manage_id").Where("id in ?", slice).Find(&data).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.New("user does not exist")
 	}
@@ -74,7 +90,7 @@ func SaveFinishedStock(finished *models.FinishedStock) (*models.FinishedStock, e
 	if finished.Amount < 0 {
 		return nil, errors.New("insufficient inventory")
 	}
-	
+
 	err := global.Db.Model(&models.FinishedStock{}).Create(&finished).Error
 
 	return finished, err

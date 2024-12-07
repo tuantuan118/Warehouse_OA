@@ -36,11 +36,11 @@ func GetIngredientsById(id int) (*models.Ingredients, error) {
 }
 
 func GetIngredientsByName(name string) ([]int, error) {
-	db := global.Db.Model(&models.Ingredients{})
-
 	slice := strings.Split(name, ";")
+
+	db := global.Db.Model(&models.Ingredients{})
 	idList := make([]int, 0)
-	err := db.Select("id").Where("name = ?", slice).First(&idList).Error
+	err := db.Select("id").Where("name in ?", slice).Find(&idList).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.New("user does not exist")
 	}
@@ -49,10 +49,11 @@ func GetIngredientsByName(name string) ([]int, error) {
 }
 
 func GetIngredientsBySupplier(supplier string) ([]int, error) {
-	db := global.Db.Model(&models.Ingredients{})
+	slice := strings.Split(supplier, ";")
 
+	db := global.Db.Model(&models.Ingredients{})
 	idList := make([]int, 0)
-	err := db.Select("id").Where("supplier = ?", supplier).First(&idList).Error
+	err := db.Select("id").Where("supplier in ?", slice).Find(&idList).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.New("user does not exist")
 	}

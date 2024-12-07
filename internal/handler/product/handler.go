@@ -25,8 +25,10 @@ func InitProductRouter(router *gin.RouterGroup) {
 func (*Product) list(c *gin.Context) {
 	pn, pSize := utils.ParsePaginationParams(c)
 	product := &models.Product{
-		OrderNumber: c.DefaultQuery("orderNumber", ""),
-		Name:        c.DefaultQuery("name", ""),
+		BaseModel: models.BaseModel{
+			ID: utils.DefaultQueryInt(c, "id", 0),
+		},
+		Name: c.DefaultQuery("name", ""),
 	}
 	data, err := service.GetProductList(product, pn, pSize)
 	if err != nil {
