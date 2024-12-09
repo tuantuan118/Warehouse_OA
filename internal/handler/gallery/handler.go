@@ -100,8 +100,8 @@ func (*Gallery) uploads(c *gin.Context) {
 	username := c.GetString("userName")
 
 	m := map[string][]string{
-		"success": []string{},
-		"error":   []string{},
+		"success": {},
+		"error":   {},
 	}
 	for _, file := range files {
 		filename := file.Filename

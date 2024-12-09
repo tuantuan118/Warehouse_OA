@@ -112,7 +112,7 @@ func IfECommBillByName(name string) error {
 }
 
 func UploadECommBill(file *multipart.FileHeader, username string) error {
-	dataList, err := utils.UploadExecl(file)
+	dataList, err := utils.UploadXlsx(file)
 	if err != nil {
 		return err
 	}

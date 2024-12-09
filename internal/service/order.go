@@ -68,7 +68,7 @@ func GetOrderList(order *models.Order, customerStr, begTime, endTime string, pn,
 	data := make([]models.Order, 0)
 	err = db.Find(&data).Error
 
-	for n, _ := range data {
+	for n := range data {
 		data[n].ImageList = make([]string, 0)
 		if data[n].Images != "" {
 			data[n].ImageList = strings.Split(data[n].Images, ";")
@@ -398,7 +398,12 @@ func ExportOrder(order *models.Order) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func(f *excelize.File) {
+		err := f.Close()
+		if err != nil {
+
+		}
+	}(f)
 
 	F6 := fmt.Sprintf("开单时间：%s", data.CreatedAt.Format("2006/01/02"))
 	if err := f.SetCellValue("Sheet1", "F6", F6); err != nil {
@@ -525,29 +530,6 @@ func getTodayOrderCount() (int64, error) {
 		"add_time >= ?", startOfDay).Count(&total).Error
 
 	return total, err
-}
-
-func getOrderStatus(status int) string {
-	switch status {
-	case 1:
-		return "待出库"
-	case 2:
-		return "未完成支付"
-	case 3:
-		return "已支付"
-	case 4:
-		return "作废"
-	default:
-		return "未知状态"
-	}
-}
-
-func getOrderUser(userList []models.User) string {
-	userStr := ""
-	for _, user := range userList {
-		userStr += user.Nickname + ", "
-	}
-	return strings.TrimRight(userStr, ", ")
 }
 
 func GetOrderByCustomer(customerId int) error {

@@ -41,7 +41,7 @@ func getExcelColumnName(n int) string {
 	result := ""
 	for n > 0 {
 		n-- // Excel 列从 1 开始，这里减一进行调整
-		result = string('A'+(n%26)) + result
+		result = string(rune('A'+(n%26))) + result
 		n /= 26
 	}
 	return result

@@ -45,17 +45,18 @@ func GetInventoryById(id int) (*models.IngredientInventory, error) {
 	return data, err
 }
 
-func GetInventoryStockNumById(ingredientId int) (*models.IngredientInventory, error) {
-	db := global.Db.Model(&models.IngredientInventory{})
-
-	data := &models.IngredientInventory{}
-	err := db.Where("ingredient_id = ?", ingredientId).First(&data).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errors.New("user does not exist")
-	}
-
-	return data, err
-}
+// GetInventoryStockNumById 根据ID获取库存
+//func GetInventoryStockNumById(ingredientId int) (*models.IngredientInventory, error) {
+//	db := global.Db.Model(&models.IngredientInventory{})
+//
+//	data := &models.IngredientInventory{}
+//	err := db.Where("ingredient_id = ?", ingredientId).First(&data).Error
+//	if errors.Is(err, gorm.ErrRecordNotFound) {
+//		return nil, errors.New("user does not exist")
+//	}
+//
+//	return data, err
+//}
 
 func GetInventoryByIdList(ids string) ([]string, []string, error) {
 	slice := strings.Split(ids, ";")

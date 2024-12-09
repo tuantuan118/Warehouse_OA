@@ -43,15 +43,15 @@ func AmountConvert(pMoney float64, pRound bool) string {
 			UnitLen = UnitLen - 1
 		}
 	}
-	for i, _ := range regex {
+	for i := range regex {
 		reg := regexp.MustCompile(regex[i][0])
 		str = reg.ReplaceAllString(str, regex[i][1])
 	}
 	if string(str[0:3]) == "元" {
-		str = string(str[3:len(str)])
+		str = str[3:]
 	}
 	if string(str[0:3]) == "零" {
-		str = string(str[3:len(str)])
+		str = str[3:]
 	}
 	return str
 }

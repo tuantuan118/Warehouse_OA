@@ -36,13 +36,13 @@ func Success(c *gin.Context, data interface{}) {
 }
 
 // SuccessWithMessage 自定义消息的成功响应
-func SuccessWithMessage(c *gin.Context, message string, data interface{}) {
-	c.JSON(http.StatusOK, Response{
-		Code:    SuccessCode,
-		Message: message,
-		Data:    data,
-	})
-}
+//func SuccessWithMessage(c *gin.Context, message string, data interface{}) {
+//	c.JSON(http.StatusOK, Response{
+//		Code:    SuccessCode,
+//		Message: message,
+//		Data:    data,
+//	})
+//}
 
 // Error 错误响应
 func Error(c *gin.Context, code int, message string) {

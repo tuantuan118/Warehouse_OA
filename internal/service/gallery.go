@@ -155,7 +155,6 @@ func IfGalleryByName(name string) error {
 func SaveCosImages(f *multipart.FileHeader) (string, string, error) {
 
 	// 创建保存路径
-	//saveDir := "/root/jiahua/cos/images"
 	saveDir := "./cos/images"
 	if _, err := os.Stat(saveDir); os.IsNotExist(err) {
 		err = os.MkdirAll(saveDir, os.ModePerm)

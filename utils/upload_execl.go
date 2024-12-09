@@ -6,7 +6,7 @@ import (
 	"mime/multipart"
 )
 
-func UploadExecl(file *multipart.FileHeader) ([]map[string]string, error) {
+func UploadXlsx(file *multipart.FileHeader) ([]map[string]string, error) {
 	fileContent, err := file.Open()
 	if err != nil {
 		return nil, err

@@ -75,7 +75,7 @@ func GetInBoundList(name, supplier, stockUser, stockUnit, begTime, endTime strin
 		return nil, err
 	}
 
-	for n, _ := range data {
+	for n := range data {
 		if data[n].FinishPriceStr == "" {
 			continue
 		}
@@ -292,8 +292,8 @@ func ExportIngredients(name, supplier, stockUser, begTime, endTime string) (*exc
 			"配料规格":  v.Specification,
 			"单价（元）": v.Price,
 			"金额（元）": v.TotalPrice,
-			"采购金额":  v.Price * float64(v.StockNum),
-			"入库数量":  fmt.Sprintf("%d%s", v.StockNum, returnUnit(v.StockUnit)),
+			"采购金额":  v.Price * v.StockNum,
+			"入库数量":  fmt.Sprintf("%f%s", v.StockNum, returnUnit(v.StockUnit)),
 			"入库人员":  v.StockUser,
 			"入库时间":  v.StockTime,
 			"备注":    v.Remark,

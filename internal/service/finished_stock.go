@@ -37,18 +37,19 @@ func GetFinishedStockById(id int) (*models.FinishedStock, error) {
 	return data, err
 }
 
-func GetFinishedStockByIdList(ids string) ([]int, error) {
-	slice := strings.Split(ids, ";")
-
-	db := global.Db.Model(&models.FinishedStock{})
-	data := make([]int, 0)
-	err := db.Select("finished_manage_id").Where("id in ?", slice).Find(&data).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errors.New("user does not exist")
-	}
-
-	return data, err
-}
+// GetFinishedStockByIdList 获取库存id列表
+//func GetFinishedStockByIdList(ids string) ([]int, error) {
+//	slice := strings.Split(ids, ";")
+//
+//	db := global.Db.Model(&models.FinishedStock{})
+//	data := make([]int, 0)
+//	err := db.Select("finished_manage_id").Where("id in ?", slice).Find(&data).Error
+//	if errors.Is(err, gorm.ErrRecordNotFound) {
+//		return nil, errors.New("user does not exist")
+//	}
+//
+//	return data, err
+//}
 
 func SaveFinishedStockByInBound(tx *gorm.DB, finished *models.Finished) error {
 	var err error
