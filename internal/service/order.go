@@ -158,6 +158,7 @@ func SaveOrder(order *models.Order) (*models.Order, error) {
 
 	order.OrderNumber = fmt.Sprintf("QY%s%d", today, total+10001)
 	order.Name = productData.Name
+	order.Specification = productData.Specification
 	totalPrice := order.Price * float64(order.Amount)
 	order.TotalPrice = totalPrice
 	order.FinishPrice = 0

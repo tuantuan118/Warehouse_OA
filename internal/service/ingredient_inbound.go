@@ -181,6 +181,7 @@ func UpdateInBound(inBound *models.IngredientInBound) (*models.IngredientInBound
 	}()
 
 	inBound.TotalPrice = inBound.Price * inBound.StockNum
+	inBound.UnFinishPrice = inBound.TotalPrice - oldData.FinishPrice
 	err = tx.Updates(&inBound).Error
 	if err != nil {
 		return nil, err
